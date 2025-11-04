@@ -61,24 +61,21 @@ ACOResult AntColony::run() {
             ants[k].visited[start] = true;
         }
 
-        // Муравьи строят пути
         for (auto& ant : ants) {
             while (ant.path.back() != end) {
                 int current = ant.path.back();
                 int next = selectNext(ant, current);
-                if (next == -1) break; // Некуда идти
+
+                if (next == -1) break;
                 ant.path.push_back(next);
                 ant.visited[next] = true;
                 ant.pathLength += graph[current][next];
             }
 
-            // Проверяем, дошел ли муравей до конца
-            if (ant.path.back() == end) {
+            if (ant.path.back() == end) 
                 foundAnyPath = true;
-            }
         }
 
-        // Испарение феромонов
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 pheromone[i][j] *= (1.0 - evaporation);
@@ -87,10 +84,10 @@ ACOResult AntColony::run() {
 
         bool improved = false;
 
-        // Обновление феромонов на успешных путях
         for (auto& ant : ants) {
             if (ant.path.back() == end) {
                 double pheromoneAmount = Q / ant.pathLength;
+
                 for (size_t i = 0; i + 1 < ant.path.size(); i++) {
                     int u = ant.path[i];
                     int v = ant.path[i + 1];
@@ -98,7 +95,6 @@ ACOResult AntColony::run() {
                     pheromone[v][u] += pheromoneAmount;
                 }
 
-                // Обновляем лучший путь
                 if (ant.pathLength < bestLength) {
                     bestLength = ant.pathLength;
                     bestPath = ant.path;
@@ -108,14 +104,13 @@ ACOResult AntColony::run() {
             }
         }
 
-        if (improved) {
+        if (improved) 
             noImprovement = 0;
-        }
-        else {
+        
+        else 
             noImprovement++;
-        }
+        
 
-        // Минимальный вывод для тестов (можно закомментировать для полной тишины)
         if (it % 10 == 0) {
             cout << "Iteration " << it + 1;
             if (result.pathFound) {
@@ -127,31 +122,28 @@ ACOResult AntColony::run() {
             cout << endl;
         }
 
-        // Критерий остановки по стагнации
         if (noImprovement >= stagnationLimit) {
             cout << "Stopped early after " << it + 1 << " iterations due to stagnation." << endl;
             break;
         }
     }
 
-    // Записываем финальные результаты
     result.bestPath = bestPath;
     result.bestLength = bestLength;
 
-    // Если ни один муравей не нашел путь, устанавливаем максимальную длину
-    if (!result.pathFound) {
+    if (!result.pathFound) 
         result.bestLength = numeric_limits<double>::max();
-    }
+    
 
-    // Финальный вывод (можно закомментировать для тестов)
     if (result.pathFound) {
         cout << "SUCCESS: Path found: ";
         for (size_t i = 0; i < result.bestPath.size(); i++) {
             string label = labels[result.bestPath[i]];
-
             result.bestPathLabels.append(label);
+
             cout << label;
-            if (i < result.bestPath.size() - 1) cout << " -> ";
+            if (i < result.bestPath.size() - 1) 
+                cout << " -> ";
         }
         cout << " (length: " << result.bestLength << ", iterations: " << result.iterations << ")" << endl;
     }

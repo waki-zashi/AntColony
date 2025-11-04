@@ -25,34 +25,25 @@ public:
         DijkstraResult result;
         int n = graph.size();
 
-        // Массивы для алгоритма Дейкстры
         vector<double> dist(n, numeric_limits<double>::max());
         vector<int> prev(n, -1);
         vector<bool> visited(n, false);
 
-        // Приоритетная очередь: (расстояние, вершина)
-        priority_queue<pair<double, int>,
-            vector<pair<double, int>>,
-            greater<pair<double, int>>> pq;
+        priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> pq;
 
-        // Инициализация
         dist[start] = 0.0;
         pq.push({ 0.0, start });
 
         while (!pq.empty()) {
-            // Извлекаем вершину с минимальным расстоянием
             double currentDist = pq.top().first;
             int current = pq.top().second;
             pq.pop();
 
-            // Если уже посетили эту вершину, пропускаем
             if (visited[current]) continue;
             visited[current] = true;
 
-            // Если дошли до конечной вершины, можно выйти
             if (current == end) break;
 
-            // Обходим всех соседей
             for (int neighbor = 0; neighbor < n; neighbor++) {
                 if (graph[current][neighbor] > 0 && !visited[neighbor]) {
                     double newDist = currentDist + graph[current][neighbor];
@@ -66,12 +57,10 @@ public:
             }
         }
 
-        // Восстанавливаем путь
         if (dist[end] < numeric_limits<double>::max()) {
             result.pathFound = true;
             result.bestLength = dist[end];
 
-            // Восстанавливаем путь от конца к началу
             vector<int> path;
             for (int v = end; v != -1; v = prev[v]) {
                 path.push_back(v);
@@ -86,29 +75,27 @@ public:
 
 class DijkstraTestRunner : public TestRunner {
 public:
-    void runSingleTest(const std::string& graphFile, const std::string& testName) override {
-        // Загрузка графа
+    void runSingleTest(const string& graphFile, const string& testName) override {
         bool fileLoaded;
-        std::vector<std::vector<double>> graph;
-        std::vector<std::string> labels;
+        vector<vector<double>> graph;
+        vector<string> labels;
 
         readGraphFromFile(graphFile, fileLoaded, graph, labels);
 
         if (!fileLoaded || graph.empty()) {
-            std::cerr << "  Failed to load graph: " << graphFile << std::endl;
+            cerr << "  Failed to load graph: " << graphFile << endl;
             return;
         }
 
         int n = labels.size();
         if (n == 0) {
-            std::cerr << "  Empty graph: " << graphFile << std::endl;
+            cerr << "  Empty graph: " << graphFile << endl;
             return;
         }
 
-        // Выбор случайных start и end (разные вершины)
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<int> dist(0, n - 1);
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_int_distribution<int> dist(0, n - 1);
 
         int start = dist(gen);
         int end;
@@ -116,19 +103,17 @@ public:
             end = dist(gen);
         } while (end == start);
 
-        std::cout << "  Path: " << labels[start] << " -> " << labels[end];
-        std::cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << std::endl;
+        cout << "  Path: " << labels[start] << " -> " << labels[end];
+        cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;
 
-        // Запуск алгоритма Дейкстры с замером времени
-        auto startTime = std::chrono::high_resolution_clock::now();
+        auto startTime = chrono::high_resolution_clock::now();
 
         DijkstraResult result = Dijkstra::findShortestPath(graph, labels, start, end);
 
-        auto endTime = std::chrono::high_resolution_clock::now();
-        double executionTime = std::chrono::duration<double>(endTime - startTime).count();
+        auto endTime = chrono::high_resolution_clock::now();
+        double executionTime = chrono::duration<double>(endTime - startTime).count();
 
-        // Формируем строку с путем
-        std::string pathSequence = "NO_PATH";
+        string pathSequence = "NO_PATH";
         if (result.pathFound && !result.bestPath.empty()) {
             pathSequence = "";
             for (size_t i = 0; i < result.bestPath.size(); i++) {
@@ -139,7 +124,6 @@ public:
             }
         }
 
-        // Сохранение результатов
         TestResult testResult;
         testResult.testName = testName;
         testResult.executionTime = executionTime;
@@ -147,28 +131,27 @@ public:
         testResult.vertices = n;
         testResult.edges = countEdges(graph);
         testResult.foundPath = result.pathFound;
-        testResult.iterations = 1; // Дейкстра всегда за 1 "итерацию"
+        testResult.iterations = 1;
         testResult.bestPathSequence = pathSequence;
 
         results.push_back(testResult);
 
-        std::cout << "  Result: time=" << executionTime << "s, length=";
+        cout << "  Result: time=" << executionTime << "s, length=";
 
         if (result.pathFound) {
-            std::cout << result.bestLength;
+            cout << result.bestLength;
         }
         else {
-            std::cout << "NO_PATH";
+            cout << "NO_PATH";
         }
 
-        std::cout << ", found=" << (result.pathFound ? "yes" : "no") << std::endl;
+        cout << ", found=" << (result.pathFound ? "yes" : "no") << endl;
     }
 
     void runTestSuite(const string& testDirectory) override {
         cout << "=== Dijkstra Algorithm Test Suite ===" << endl;
         cout << "Looking for test files in: " << testDirectory << endl;
 
-        // Читаем список файлов из сгенерированного списка
         vector<string> testFiles = readTestFilesList(testDirectory);
 
         if (testFiles.empty()) {
@@ -180,20 +163,17 @@ public:
         cout << "Found " << testFiles.size() << " test files in the list." << endl;
 
         int testCount = 0;
-        const int maxTests = min(100, (int)testFiles.size()); // Ограничиваем 100 тестами
+        const int maxTests = min(100, (int)testFiles.size());
 
-        // Запускаем тесты для каждого файла из списка
         for (size_t i = 0; i < testFiles.size() && testCount < maxTests; i++) {
             string filename = testFiles[i];
             string fullPath = testDirectory + "/" + filename;
 
-            // Проверяем что файл действительно существует
             if (!fileExists(fullPath)) {
                 cout << "Warning: File from list not found: " << fullPath << endl;
                 continue;
             }
 
-            // Извлекаем имя теста (убираем расширение .csv)
             string testName = filename;
             size_t dotPos = testName.find_last_of(".");
             if (dotPos != string::npos) {

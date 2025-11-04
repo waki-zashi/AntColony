@@ -7,7 +7,6 @@
 
 using namespace std;
 
-// Вспомогательная функция для подсчета ребер
 int TestRunner::countEdges(const vector<vector<double>>& graph) {
     int n = graph.size();
     int edgeCount = 0;
@@ -23,7 +22,6 @@ int TestRunner::countEdges(const vector<vector<double>>& graph) {
     return edgeCount;
 }
 
-// Проверка существования файла
 bool TestRunner::fileExists(const string& filename) {
     ifstream file(filename);
     return file.good();
@@ -54,7 +52,6 @@ void TestRunner::runTestSuite(const string& testDirectory) {
     cout << "=== ACO Algorithm Test Suite ===" << endl;
     cout << "Looking for test files in: " << testDirectory << endl;
 
-    // Читаем список файлов из сгенерированного списка
     vector<string> testFiles = readTestFilesList(testDirectory);
 
     if (testFiles.empty()) {
@@ -66,20 +63,17 @@ void TestRunner::runTestSuite(const string& testDirectory) {
     cout << "Found " << testFiles.size() << " test files in the list." << endl;
 
     int testCount = 0;
-    const int maxTests = min(100, (int)testFiles.size()); // Ограничиваем 100 тестами
+    const int maxTests = min(100, (int)testFiles.size());
 
-    // Запускаем тесты для каждого файла из списка
     for (size_t i = 0; i < testFiles.size() && testCount < maxTests; i++) {
         string filename = testFiles[i];
         string fullPath = testDirectory + "/" + filename;
 
-        // Проверяем что файл действительно существует
         if (!fileExists(fullPath)) {
             cout << "Warning: File from list not found: " << fullPath << endl;
             continue;
         }
 
-        // Извлекаем имя теста (убираем расширение .csv)
         string testName = filename;
         size_t dotPos = testName.find_last_of(".");
         if (dotPos != string::npos) {
@@ -103,7 +97,6 @@ void TestRunner::runTestSuite(const string& testDirectory) {
 }
 
 void TestRunner::runSingleTest(const string& graphFile, const string& testName) {
-    // Загрузка графа
     bool fileLoaded;
     vector<vector<double>> graph;
     vector<string> labels;
@@ -121,7 +114,6 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
         return;
     }
 
-    // Выбор случайных start и end (разные вершины)
     random_device rd;
     mt19937 gen(rd());
     uniform_int_distribution<int> dist(0, n - 1);
@@ -135,17 +127,15 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
     cout << "  Path: " << labels[start] << " -> " << labels[end];
     cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;
 
-    // Запуск алгоритма с замером времени
     auto startTime = chrono::high_resolution_clock::now();
 
-    // РЕАЛЬНЫЙ ВЫЗОВ ACO (без заглушки!)
     AntColony colony(graph, labels, start, end);
     ACOResult result = colony.run();
 
     auto endTime = chrono::high_resolution_clock::now();
     double executionTime = chrono::duration<double>(endTime - startTime).count();
 
-    std::string pathSequence = "NO_PATH";
+    string pathSequence = "NO_PATH";
     if (result.pathFound && !result.bestPath.empty()) {
         pathSequence = "";
         for (size_t i = 0; i < result.bestPath.size(); i++) {
@@ -156,7 +146,6 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
         }
     }
 
-    // Сохранение результатов
     TestResult testResult;
     testResult.testName = testName;
     testResult.executionTime = executionTime;
@@ -165,7 +154,7 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
     testResult.edges = countEdges(graph);
     testResult.foundPath = result.pathFound;
     testResult.iterations = result.iterations;
-    testResult.bestPathSequence = pathSequence;  // Сохраняем последовательность
+    testResult.bestPathSequence = pathSequence;
 
     results.push_back(testResult);
 
@@ -189,7 +178,6 @@ void TestRunner::saveResultsToCSV(const string& filename) {
         return;
     }
 
-    // Заголовок CSV
     file << "TestName,Vertices,Edges,Time,PathLength,FoundPath,Iterations,PathSequence\n";
 
     for (const auto& result : results) {
@@ -200,7 +188,7 @@ void TestRunner::saveResultsToCSV(const string& filename) {
             << result.bestPathLength << ","
             << (result.foundPath ? "true" : "false") << ","
             << result.iterations << ","
-            << "\"" << result.bestPathSequence << "\"" << "\n";  // Добавляем путь в кавычках
+            << "\"" << result.bestPathSequence << "\"" << "\n";
     }
 
     cout << "Results saved to: " << filename << endl;

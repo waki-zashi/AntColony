@@ -12,8 +12,7 @@ string testDirectory = "test_cases";
 
 int main() {
     bool mainRunFlag = true;
-    while (mainRunFlag)
-    {
+    while (mainRunFlag) {
         string baseCommand;
         cout << "Enter program mode: autotests (a) or initial (i)" << endl;
         cin >> baseCommand;

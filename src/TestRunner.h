@@ -15,10 +15,9 @@ struct TestResult {
     int edges;
     bool foundPath;
     int iterations;
-    string bestPathSequence;  // Добавляем это поле
+    string bestPathSequence;
 };
 
-// Объявление функции чтения графов
 void readGraphFromFile(const string& filename, bool& fileLoaded, vector<vector<double>>& graph, vector<string>& labels);
 vector<string> readTestFilesList(const string& testDirectory);
 
