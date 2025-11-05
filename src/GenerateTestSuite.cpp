@@ -163,7 +163,3 @@ void generateConnectedTestSuite() {
         }
     }
 }
-
-//int main() {
-//    generateConnectedTestSuite();
-//}

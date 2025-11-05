@@ -79,8 +79,10 @@ public:
         bool fileLoaded;
         vector<vector<double>> graph;
         vector<string> labels;
+        int start = -1;
+        int end = -1;
 
-        readGraphFromFile(graphFile, fileLoaded, graph, labels);
+        readGraphFromFile(graphFile, fileLoaded, graph, labels, start, end);
 
         if (!fileLoaded || graph.empty()) {
             cerr << "  Failed to load graph: " << graphFile << endl;
@@ -93,7 +95,7 @@ public:
             return;
         }
 
-        random_device rd;
+        /*random_device rd;
         mt19937 gen(rd());
         uniform_int_distribution<int> dist(0, n - 1);
 
@@ -101,7 +103,7 @@ public:
         int end;
         do {
             end = dist(gen);
-        } while (end == start);
+        } while (end == start);*/
 
         cout << "  Path: " << labels[start] << " -> " << labels[end];
         cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;

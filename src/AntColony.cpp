@@ -10,8 +10,7 @@ using namespace std;
 
 Ant::Ant(int n) : visited(n, false), pathLength(0.0) {}
 
-AntColony::AntColony(const vector<vector<double>>& g, const vector<string>& names, int s, int e)
-    : gen(std::random_device{}()), dist(0.0, 1.0) {
+AntColony::AntColony(const vector<vector<double>>& g, const vector<string>& names, int s, int e) : gen(std::random_device{}()), dist(0.0, 1.0) {
     graph = g;
     labels = names;
     n = g.size();
@@ -103,6 +102,26 @@ ACOResult AntColony::run() {
                 }
             }
         }
+
+//        cout << "Iteration " << it + 1 << " - Pheromone matrix:\n\t";
+//        for (int j = 0; j < n; j++) cout << labels[j] << "\t";
+//        cout << "\n";
+//        for (int i = 0; i < n; i++) {
+//            cout << labels[i] << "\t";
+//            for (int j = 0; j < n; j++) {
+//                cout << pheromone[i][j] << "\t";
+//            }
+//            cout << "\n";
+//        }
+//        cout << "---------------------------\n";
+//
+//        this_thread::sleep_for(chrono::seconds(1));
+// 
+////#ifdef _WIN32
+////        system("cls");
+////#else
+////        system("clear");
+////#endif
 
         if (improved) 
             noImprovement = 0;

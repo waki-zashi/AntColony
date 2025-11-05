@@ -18,7 +18,7 @@ struct TestResult {
     string bestPathSequence;
 };
 
-void readGraphFromFile(const string& filename, bool& fileLoaded, vector<vector<double>>& graph, vector<string>& labels);
+void readGraphFromFile(const string& filename, bool& fileLoaded, vector<vector<double>>& graph, vector<string>& labels, int& start, int& end);
 vector<string> readTestFilesList(const string& testDirectory);
 
 class TestRunner {

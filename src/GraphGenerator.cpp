@@ -197,4 +197,16 @@ void GraphGenerator::saveGraphToFile(const vector<vector<double>>& graph,
         }
         file << "\n";
     }
+
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dist(0, graph.size() - 1);
+
+    int start = dist(gen);
+    int end;
+    do {
+        end = dist(gen);
+    } while (end == start);
+
+    file << start << "," << end << "\n";
 }

@@ -4,6 +4,8 @@
 #include "Dijkstra.h"
 #include "FloydWarshall.h"
 #include "AStar.h"
+#include "ResultAnalyzer.h"
+#include "GenerateTestSuite.h"
 #include <iostream>
 
 using namespace std;
@@ -14,7 +16,7 @@ int main() {
     bool mainRunFlag = true;
     while (mainRunFlag) {
         string baseCommand;
-        cout << "Enter program mode: autotests (a) or initial (i)" << endl;
+        cout << "Enter program mode: autotests (a), initial (i) or recreate test cases (r): ";
         cin >> baseCommand;
 
         if (baseCommand == "a") {
@@ -68,7 +70,24 @@ int main() {
                 }
                 else if (choiceTestCommand == "all") {
                     choiceTestFlag = false;
-                    cout << "Poka ne gotovo";
+                    
+                    cout << "=== ALGORITHM COMPARISON TOOL ===" << endl;
+
+                    ResultsAnalyzer analyzer;
+
+                    analyzer.loadResults(
+                        "aco_results.csv",
+                        "dijkstra_results.csv",
+                        "astar_results.csv",
+                        "fw_results.csv"
+                    );
+
+                    analyzer.generateComparativeAnalysis();
+
+                    cout << "=== Analysis complete! ===" << endl;
+                    cout << "Results saved to:" << endl;
+                    cout << "- detailed_comparison.csv" << endl;
+                    cout << "- summary_comparison.csv" << endl;
                 }
                 else {
                     cout << "Wrong chiose, please repeat correctly: 'aco', 'dj', 'fw', 'a*' or 'all'";
@@ -85,8 +104,10 @@ int main() {
             bool fileLoaded = false;
             vector<vector<double>> graph;
             vector<string> labels;
+            int start = -1;
+            int end = -1;
 
-            readGraphFromFile(filename, fileLoaded, graph, labels);
+            readGraphFromFile(filename, fileLoaded, graph, labels, start, end);
 
             if (!fileLoaded) {
                 graph = {
@@ -97,32 +118,37 @@ int main() {
                     {0, 0, 2, 3, 0}
                 };
                 labels = { "A", "B", "C", "D", "E" };
+
+                string startLabel, endLabel;
+                cout << "Enter start vertex: ";
+                cin >> startLabel;
+                cout << "Enter end vertex: ";
+                cin >> endLabel;
+
+                for (size_t i = 0; i < labels.size(); i++) {
+                    if (labels[i] == startLabel) start = i;
+                    if (labels[i] == endLabel) end = i;
+                }
+
+                if (start == -1 || end == -1) {
+                    cerr << "Invalid start or end vertex!\n";
+                    return 1;
+                }
             }
 
             cout << "Graph loaded with " << graph.size() << " vertices.\n";
             cout << "Vertices: ";
-            for (auto& l : labels) cout << l << " ";
+            for (auto& l : labels) 
+                cout << l << " ";
             cout << "\n";
-
-            string startLabel, endLabel;
-            cout << "Enter start vertex: ";
-            cin >> startLabel;
-            cout << "Enter end vertex: ";
-            cin >> endLabel;
-
-            int start = -1, end = -1;
-            for (size_t i = 0; i < labels.size(); i++) {
-                if (labels[i] == startLabel) start = i;
-                if (labels[i] == endLabel) end = i;
-            }
-
-            if (start == -1 || end == -1) {
-                cerr << "Invalid start or end vertex!\n";
-                return 1;
-            }
 
             AntColony colony(graph, labels, start, end);
             colony.run();
+        }
+        else if (baseCommand == "r") {
+            mainRunFlag = false;
+
+            generateConnectedTestSuite();
         }
         else {
             cout << "Wrong command, enter 'a' or 'i' to choose mode" << endl;

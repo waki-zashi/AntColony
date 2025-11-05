@@ -112,8 +112,10 @@ public:
         bool fileLoaded;
         vector<vector<double>> graph;
         vector<string> labels;
+        int start = -1;
+        int end = -1;
 
-        readGraphFromFile(graphFile, fileLoaded, graph, labels);
+        readGraphFromFile(graphFile, fileLoaded, graph, labels, start, end);
 
         if (!fileLoaded || graph.empty()) {
             cerr << "  Failed to load graph: " << graphFile << endl;
@@ -126,7 +128,7 @@ public:
             return;
         }
 
-        random_device rd;
+        /*random_device rd;
         mt19937 gen(rd());
         uniform_int_distribution<int> dist(0, n - 1);
 
@@ -134,7 +136,7 @@ public:
         int end;
         do {
             end = dist(gen);
-        } while (end == start);
+        } while (end == start);*/
 
         cout << "  Path: " << labels[start] << " -> " << labels[end];
         cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;
@@ -179,5 +181,53 @@ public:
         }
 
         cout << ", found=" << (result.pathFound ? "yes" : "no") << endl;
+    }
+
+    void runTestSuite(const string& testDirectory) override {
+        cout << "=== A-Star Algorithm Test Suite ===" << endl;
+        cout << "Looking for test files in: " << testDirectory << endl;
+
+        vector<string> testFiles = readTestFilesList(testDirectory);
+
+        if (testFiles.empty()) {
+            cout << "ERROR: No test files list found or list is empty!" << endl;
+            cout << "Please run generate_test_suite first to create test graphs." << endl;
+            return;
+        }
+
+        cout << "Found " << testFiles.size() << " test files in the list." << endl;
+
+        int testCount = 0;
+        const int maxTests = min(100, (int)testFiles.size());
+
+        for (size_t i = 0; i < testFiles.size() && testCount < maxTests; i++) {
+            string filename = testFiles[i];
+            string fullPath = testDirectory + "/" + filename;
+
+            if (!fileExists(fullPath)) {
+                cout << "Warning: File from list not found: " << fullPath << endl;
+                continue;
+            }
+
+            string testName = filename;
+            size_t dotPos = testName.find_last_of(".");
+            if (dotPos != string::npos) {
+                testName = testName.substr(0, dotPos);
+            }
+
+            cout << "[" << (testCount + 1) << "] Running: " << testName << endl;
+            runSingleTest(fullPath, testName);
+            testCount++;
+        }
+
+        if (testCount == 0) {
+            cout << "ERROR: No valid test files found!" << endl;
+            cout << "Files from list exist but cannot be loaded." << endl;
+            return;
+        }
+
+        cout << "\n=== Completed " << testCount << " tests ===" << endl;
+        printSummary();
+        saveResultsToCSV("astar_results.csv");
     }
 };

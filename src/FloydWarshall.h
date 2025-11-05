@@ -23,11 +23,9 @@ public:
         FloydWarshallResult result;
         int n = graph.size();
 
-        // Матрицы расстояний и предков
         vector<vector<double>> dist(n, vector<double>(n, numeric_limits<double>::max()));
         vector<vector<int>> next(n, vector<int>(n, -1));
 
-        // Инициализация матриц
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 if (i == j) {
@@ -40,7 +38,6 @@ public:
             }
         }
 
-        // Алгоритм Флойда-Уоршелла
         for (int k = 0; k < n; k++) {
             for (int i = 0; i < n; i++) {
                 for (int j = 0; j < n; j++) {
@@ -55,7 +52,6 @@ public:
             }
         }
 
-        // Проверяем существование пути
         if (dist[start][end] < numeric_limits<double>::max()) {
             result.pathFound = true;
             result.bestLength = dist[start][end];
@@ -87,12 +83,13 @@ private:
 class FloydWarshallTestRunner : public TestRunner {
 public:
     void runSingleTest(const string& graphFile, const string& testName) override {
-        // Загрузка графа
         bool fileLoaded;
         vector<vector<double>> graph;
         vector<string> labels;
+        int start = -1;
+        int end = -1;
 
-        readGraphFromFile(graphFile, fileLoaded, graph, labels);
+        readGraphFromFile(graphFile, fileLoaded, graph, labels, start, end);
 
         if (!fileLoaded || graph.empty()) {
             cerr << "  Failed to load graph: " << graphFile << endl;
@@ -105,8 +102,7 @@ public:
             return;
         }
 
-        // Выбор случайных start и end (разные вершины)
-        random_device rd;
+        /*random_device rd;
         mt19937 gen(rd());
         uniform_int_distribution<int> dist(0, n - 1);
 
@@ -114,12 +110,11 @@ public:
         int end;
         do {
             end = dist(gen);
-        } while (end == start);
+        } while (end == start);*/
 
         cout << "  Path: " << labels[start] << " -> " << labels[end];
         cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;
 
-        // Запуск алгоритма Флойда-Уоршелла с замером времени
         auto startTime = chrono::high_resolution_clock::now();
 
         FloydWarshallResult result = FloydWarshall::findShortestPath(graph, labels, start, end);
@@ -127,7 +122,6 @@ public:
         auto endTime = chrono::high_resolution_clock::now();
         double executionTime = chrono::duration<double>(endTime - startTime).count();
 
-        // Формируем строку с путем
         string pathSequence = "NO_PATH";
         if (result.pathFound && !result.bestPath.empty()) {
             pathSequence = "";
@@ -139,7 +133,6 @@ public:
             }
         }
 
-        // Сохранение результатов
         TestResult testResult;
         testResult.testName = testName;
         testResult.executionTime = executionTime;
@@ -147,7 +140,7 @@ public:
         testResult.vertices = n;
         testResult.edges = countEdges(graph);
         testResult.foundPath = result.pathFound;
-        testResult.iterations = 1; // Флойд-Уоршелл всегда за 1 "итерацию"
+        testResult.iterations = 1;
         testResult.bestPathSequence = pathSequence;
 
         results.push_back(testResult);
@@ -168,7 +161,6 @@ public:
         cout << "=== Floyd Warshall Algorithm Test Suite ===" << endl;
         cout << "Looking for test files in: " << testDirectory << endl;
 
-        // Читаем список файлов из сгенерированного списка
         vector<string> testFiles = readTestFilesList(testDirectory);
 
         if (testFiles.empty()) {
@@ -180,20 +172,17 @@ public:
         cout << "Found " << testFiles.size() << " test files in the list." << endl;
 
         int testCount = 0;
-        const int maxTests = min(100, (int)testFiles.size()); // Ограничиваем 100 тестами
+        const int maxTests = min(100, (int)testFiles.size()); 
 
-        // Запускаем тесты для каждого файла из списка
         for (size_t i = 0; i < testFiles.size() && testCount < maxTests; i++) {
             string filename = testFiles[i];
             string fullPath = testDirectory + "/" + filename;
 
-            // Проверяем что файл действительно существует
             if (!fileExists(fullPath)) {
                 cout << "Warning: File from list not found: " << fullPath << endl;
                 continue;
             }
 
-            // Извлекаем имя теста (убираем расширение .csv)
             string testName = filename;
             size_t dotPos = testName.find_last_of(".");
             if (dotPos != string::npos) {
