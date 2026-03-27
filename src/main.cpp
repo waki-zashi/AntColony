@@ -10,7 +10,7 @@
 
 using namespace std;
 
-string testDirectory = "test_cases";
+string testDirectory = "data/test_cases";
 
 int main() {
     bool mainRunFlag = true;
@@ -34,7 +34,40 @@ int main() {
                     cout << "=== ACO Algorithm Test Suite ===" << endl;
 
                     TestRunner runner;
-                    runner.runTestSuite(testDirectory);
+
+                    string modeChoice;
+                    cout << "Select mode: static (s) or dynamic (d): ";
+                    cin >> modeChoice;
+
+                    if (modeChoice == "s") {
+                        int iterations;
+                        cout << "Enter number of ACO iterations (default 200): ";
+                        cin >> iterations;
+                        
+                        runner.staticIterations = iterations;
+                        runner.runTestSuite(testDirectory, TestMode::STATIC);
+                    }
+                    else if (modeChoice == "d") {
+
+                        int states;
+                        int iterationsPerState;
+
+                        cout << "Enter number of graph states: ";
+                        cin >> states;
+
+                        cout << "Enter ACO iterations per state: ";
+                        cin >> iterationsPerState;
+
+                        runner.runTestSuite(
+                            testDirectory,
+                            TestMode::DYNAMIC,
+                            states,
+                            iterationsPerState
+                        );
+                    }
+                    else {
+                        cout << "Wrong mode selected." << endl;
+                    }
 
                     cout << "=== Testing complete ===" << endl;
                 }
@@ -142,8 +175,12 @@ int main() {
                 cout << l << " ";
             cout << "\n";
 
+            int iterations;
+            cout << "Enter number of ACO iterations (default 200): ";
+            cin >> iterations;
+
             AntColony colony(graph, labels, start, end);
-            colony.run();
+            colony.run(iterations);
         }
         else if (baseCommand == "r") {
             mainRunFlag = false;

@@ -1,174 +1,201 @@
 #include "AntColony.h"
 #include <iostream>
-#include <iomanip>
-#include <chrono>
-#include <thread>
-#include <limits>
 #include <cmath>
+#include <algorithm>
 
 using namespace std;
 
-Ant::Ant(int n) : visited(n, false), pathLength(0.0) {}
-
-AntColony::AntColony(const vector<vector<double>>& g, const vector<string>& names, int s, int e) : gen(std::random_device{}()), dist(0.0, 1.0) {
-    graph = g;
+AntColony::AntColony(const vector<vector<double>>& g, const vector<string>& names, int s, int e)
+    : gen(random_device{}()),
+    dist(0.0, 1.0)
+{
+    graph = &g;
     labels = names;
     n = g.size();
     start = s;
     end = e;
+
     pheromone.assign(n, vector<double>(n, 1.0));
-    maxIterations = n * 10;
+    numAnts = max(10, n / 4);
+    stagnationLimit = max(30, n / 5);
+}
+
+void AntColony::setGraph(const vector<vector<double>>& g) {
+    graph = &g;
+}
+
+void AntColony::iterate() {
+
+    vector<Ant> ants;
+    ants.reserve(numAnts);
+
+    totalIterations++;
+
+    for (int k = 0; k < numAnts; k++) {
+        ants.emplace_back(n);
+        ants[k].path.push_back(start);
+        ants[k].visited[start] = true;
+    }
+
+    // Construction
+    for (auto& ant : ants) {
+
+        while (ant.path.back() != end) {
+
+            int current = ant.path.back();
+            int next = selectNext(ant, current);
+
+            if (next == -1)
+                break;
+
+            ant.path.push_back(next);
+            ant.visited[next] = true;
+            ant.pathLength += (*graph)[current][next];
+        }
+
+        if (ant.path.back() == end)
+            ant.reachedEnd = true;
+    }
+
+    Ant* bestAnt = nullptr;
+
+    for (auto& ant : ants)
+        if (ant.reachedEnd)
+            if (!bestAnt || ant.pathLength < bestAnt->pathLength)
+                bestAnt = &ant;
+
+    evaporate();
+
+    if (bestAnt) {
+        deposit(*bestAnt);
+
+        if (bestAnt->pathLength < globalBestLength) {
+            globalBestLength = bestAnt->pathLength;
+            globalBestPath = bestAnt->path;
+            noImprovement = 0;
+        }
+        else {
+            noImprovement++;
+        }
+    }
+    else {
+        noImprovement++;
+    }
+
+    clampPheromones();
+}
+
+void AntColony::singleIteration() {
+    iterate();
+}
+
+void AntColony::runIterations(int k) {
+    for (int i = 0; i < k; i++)
+        iterate();
+}
+
+void AntColony::run(int iterations) {
+    runIterations(iterations);
+}
+
+ACOResult AntColony::getResult() const {
+
+    ACOResult result;
+
+    if (!globalBestPath.empty()) {
+
+        result.pathFound = true;
+        result.bestPath = globalBestPath;
+        result.bestLength = globalBestLength;
+        result.totalIterations = totalIterations;
+
+        for (size_t i = 0; i < globalBestPath.size(); i++) {
+            result.bestPathLabels += labels[globalBestPath[i]];
+            if (i + 1 < globalBestPath.size())
+                result.bestPathLabels += " -> ";
+        }
+    }
+
+    return result;
+}
+
+void AntColony::resetPheromones() {
+
+    pheromone.assign(n, vector<double>(n, 1.0));
+    globalBestPath.clear();
+    globalBestLength = numeric_limits<double>::max();
+    totalIterations = 0;
+    noImprovement = 0;
 }
 
 int AntColony::selectNext(Ant& ant, int current) {
+
     vector<double> probabilities(n, 0.0);
     double sum = 0.0;
 
     for (int j = 0; j < n; j++) {
-        if (!ant.visited[j] && graph[current][j] > 0) {
-            probabilities[j] = pow(pheromone[current][j], alpha) *
-                pow(1.0 / graph[current][j], beta);
+        if (!ant.visited[j] && (*graph)[current][j] > 0) {
+
+            double heuristic = 1.0 / max((*graph)[current][j], 1e-9);
+
+            probabilities[j] =
+                pow(pheromone[current][j], alpha) *
+                pow(heuristic, beta);
+
             sum += probabilities[j];
         }
     }
-    if (sum == 0.0) return -1;
+
+    if (sum <= 0.0)
+        return -1;
 
     double r = dist(gen) * sum;
-    double cum = 0.0;
+    double cumulative = 0.0;
+
     for (int j = 0; j < n; j++) {
-        cum += probabilities[j];
-        if (cum >= r) return j;
+        cumulative += probabilities[j];
+        if (cumulative >= r)
+            return j;
     }
+
     return -1;
 }
 
-ACOResult AntColony::run() {
-    ACOResult result;
-    vector<int> bestPath;
-    double bestLength = numeric_limits<double>::max();
-    bool foundAnyPath = false;
+void AntColony::evaporate() {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            pheromone[i][j] *= (1.0 - evaporation);
+}
 
-    int noImprovement = 0;
+void AntColony::deposit(const Ant& bestAnt) {
 
-    for (int it = 0; it < maxIterations; it++) {
-        result.iterations = it + 1;
+    if (!bestAnt.reachedEnd)
+        return;
 
-        vector<Ant> ants;
-        for (int k = 0; k < numAnts; k++) {
-            ants.emplace_back(n);
-            ants[k].path.push_back(start);
-            ants[k].visited[start] = true;
-        }
+    double delta = Q / max(bestAnt.pathLength, 1e-9);
 
-        for (auto& ant : ants) {
-            while (ant.path.back() != end) {
-                int current = ant.path.back();
-                int next = selectNext(ant, current);
+    for (size_t i = 0; i + 1 < bestAnt.path.size(); i++) {
+        int u = bestAnt.path[i];
+        int v = bestAnt.path[i + 1];
 
-                if (next == -1) break;
-                ant.path.push_back(next);
-                ant.visited[next] = true;
-                ant.pathLength += graph[current][next];
-            }
+        pheromone[u][v] += delta;
+        pheromone[v][u] += delta;
+    }
+}
 
-            if (ant.path.back() == end) 
-                foundAnyPath = true;
-        }
+void AntColony::clampPheromones() {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            pheromone[i][j] =
+            max(tau_min, min(tau_max, pheromone[i][j]));
+}
 
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                pheromone[i][j] *= (1.0 - evaporation);
-            }
-        }
-
-        bool improved = false;
-
-        for (auto& ant : ants) {
-            if (ant.path.back() == end) {
-                double pheromoneAmount = Q / ant.pathLength;
-
-                for (size_t i = 0; i + 1 < ant.path.size(); i++) {
-                    int u = ant.path[i];
-                    int v = ant.path[i + 1];
-                    pheromone[u][v] += pheromoneAmount;
-                    pheromone[v][u] += pheromoneAmount;
-                }
-
-                if (ant.pathLength < bestLength) {
-                    bestLength = ant.pathLength;
-                    bestPath = ant.path;
-                    improved = true;
-                    result.pathFound = true;
-                }
-            }
-        }
-
-//        cout << "Iteration " << it + 1 << " - Pheromone matrix:\n\t";
-//        for (int j = 0; j < n; j++) cout << labels[j] << "\t";
-//        cout << "\n";
-//        for (int i = 0; i < n; i++) {
-//            cout << labels[i] << "\t";
-//            for (int j = 0; j < n; j++) {
-//                cout << pheromone[i][j] << "\t";
-//            }
-//            cout << "\n";
-//        }
-//        cout << "---------------------------\n";
-//
-//        this_thread::sleep_for(chrono::seconds(1));
-// 
-////#ifdef _WIN32
-////        system("cls");
-////#else
-////        system("clear");
-////#endif
-
-        if (improved) 
-            noImprovement = 0;
-        
-        else 
-            noImprovement++;
-        
-
-        if (it % 10 == 0) {
-            cout << "Iteration " << it + 1;
-            if (result.pathFound) {
-                cout << " - Best: " << bestLength;
-            }
-            else {
-                cout << " - No path found yet";
-            }
-            cout << endl;
-        }
-
-        if (noImprovement >= stagnationLimit) {
-            cout << "Stopped early after " << it + 1 << " iterations due to stagnation." << endl;
-            break;
+double AntColony::getPheromoneLoadMetric() const {
+    double totalPheromone = 0.0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            totalPheromone += pheromone[i][j];
         }
     }
-
-    result.bestPath = bestPath;
-    result.bestLength = bestLength;
-
-    if (!result.pathFound) 
-        result.bestLength = numeric_limits<double>::max();
-    
-
-    if (result.pathFound) {
-        cout << "SUCCESS: Path found: ";
-        for (size_t i = 0; i < result.bestPath.size(); i++) {
-            string label = labels[result.bestPath[i]];
-            result.bestPathLabels.append(label);
-
-            cout << label;
-            if (i < result.bestPath.size() - 1) 
-                cout << " -> ";
-        }
-        cout << " (length: " << result.bestLength << ", iterations: " << result.iterations << ")" << endl;
-    }
-    else {
-        cout << "FAIL: No path found from " << labels[start] << " to " << labels[end] << endl;
-    }
-
-    return result;
+    return totalPheromone / (n * n);
 }

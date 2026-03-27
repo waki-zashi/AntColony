@@ -1,0 +1,5 @@
+Algorithm,TestType,SuccessRate,AvgTime,TotalTime,TotalTests,SuccessfulTests
+ACO,Overall,97.1429,0.0150536,1.05375,70,68
+Dijkstra,Overall,100,0.000227286,0.01591,70,70
+A*,Overall,100,0.000123177,0.0086224,70,70
+Floyd-Warshall,Overall,100,0.00495518,0.346863,70,70

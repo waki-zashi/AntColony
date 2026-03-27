@@ -1,9 +1,11 @@
 #include "TestRunner.h"
 #include "AntColony.h"
 #include "FileReader.h"
+#include "DynamicEnvironment.h"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <filesystem>
 
 using namespace std;
 
@@ -49,14 +51,30 @@ vector<string> readTestFilesList(const string& testDirectory) {
 }
 
 void TestRunner::runTestSuite(const string& testDirectory) {
+    runTestSuite(testDirectory, TestMode::STATIC, 0, 0);
+}
+
+void TestRunner::runTestSuite(const string& testDirectory,
+    TestMode mode,
+    int dynamicStates,
+    int iterationsPerState) {
+
     cout << "=== ACO Algorithm Test Suite ===" << endl;
     cout << "Looking for test files in: " << testDirectory << endl;
+
+    if (mode == TestMode::DYNAMIC) {
+        cout << "Mode: DYNAMIC" << endl;
+        cout << "Graph states: " << dynamicStates << endl;
+        cout << "ACO iterations per state: " << iterationsPerState << endl;
+    }
+    else {
+        cout << "Mode: STATIC" << endl;
+    }
 
     vector<string> testFiles = readTestFilesList(testDirectory);
 
     if (testFiles.empty()) {
         cout << "ERROR: No test files list found or list is empty!" << endl;
-        cout << "Please run generate_test_suite first to create test graphs." << endl;
         return;
     }
 
@@ -66,11 +84,12 @@ void TestRunner::runTestSuite(const string& testDirectory) {
     const int maxTests = min(100, (int)testFiles.size());
 
     for (size_t i = 0; i < testFiles.size() && testCount < maxTests; i++) {
+
         string filename = testFiles[i];
         string fullPath = testDirectory + "/" + filename;
 
         if (!fileExists(fullPath)) {
-            cout << "Warning: File from list not found: " << fullPath << endl;
+            cout << "Warning: File not found: " << fullPath << endl;
             continue;
         }
 
@@ -80,23 +99,34 @@ void TestRunner::runTestSuite(const string& testDirectory) {
             testName = testName.substr(0, dotPos);
         }
 
-        cout << "[" << (testCount + 1) << "] Running: " << testName << endl;
-        runSingleTest(fullPath, testName);
-        testCount++;
-    }
+        cout << "\n[" << (testCount + 1) << "] Running: " << testName << endl;
 
-    if (testCount == 0) {
-        cout << "ERROR: No valid test files found!" << endl;
-        cout << "Files from list exist but cannot be loaded." << endl;
-        return;
+        if (mode == TestMode::STATIC) {
+            runSingleTest(fullPath, testName);
+        }
+        else { // DYNAMIC
+            runDynamicTest(fullPath, testName,
+                dynamicStates,
+                iterationsPerState);
+        }
+
+        testCount++;
     }
 
     cout << "\n=== Completed " << testCount << " tests ===" << endl;
     printSummary();
-    saveResultsToCSV("aco_results.csv");
+
+    if (mode == TestMode::STATIC)
+        saveResultsToCSV("aco_results.csv");
+    else {
+        saveResultsToCSV("aco_dynamic_summary.csv");
+        saveDynamicResultsToCSV("aco_dynamic_states.csv");
+    }
 }
 
-void TestRunner::runSingleTest(const string& graphFile, const string& testName) {
+void TestRunner::runSingleTest(const string& graphFile,
+    const string& testName) {
+
     bool fileLoaded;
     vector<vector<double>> graph;
     vector<string> labels;
@@ -111,43 +141,22 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
     }
 
     int n = labels.size();
-    if (n == 0) {
-        cerr << "  Empty graph: " << graphFile << endl;
-        return;
-    }
-
-    /*random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<int> dist(0, n - 1);
-
-    int start = dist(gen);
-    int end;
-    do {
-        end = dist(gen);
-    } while (end == start);*/
 
     cout << "  Path: " << labels[start] << " -> " << labels[end];
-    cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;
-
-    AntColony colony(graph, labels, start, end);
+    cout << " (vertices: " << n
+        << ", edges: " << countEdges(graph) << ")" << endl;
 
     auto startTime = chrono::high_resolution_clock::now();
 
-    ACOResult result = colony.run();
+    AntColony colony(graph, labels, start, end);
+    colony.resetPheromones();
+    colony.run(staticIterations);
+
+    ACOResult result = colony.getResult();
 
     auto endTime = chrono::high_resolution_clock::now();
-    double executionTime = chrono::duration<double>(endTime - startTime).count();
-
-    string pathSequence = "NO_PATH";
-    if (result.pathFound && !result.bestPath.empty()) {
-        pathSequence = "";
-        for (size_t i = 0; i < result.bestPath.size(); i++) {
-            pathSequence += labels[result.bestPath[i]];
-            if (i < result.bestPath.size() - 1) {
-                pathSequence += "->";
-            }
-        }
-    }
+    double executionTime =
+        chrono::duration<double>(endTime - startTime).count();
 
     TestResult testResult;
     testResult.testName = testName;
@@ -156,22 +165,127 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
     testResult.vertices = n;
     testResult.edges = countEdges(graph);
     testResult.foundPath = result.pathFound;
-    testResult.iterations = result.iterations;
-    testResult.bestPathSequence = pathSequence;
+    testResult.iterations = result.totalIterations;
 
     results.push_back(testResult);
 
-    cout << "  Result: time=" << executionTime << "s, length=";
+    cout << "  Result: time=" << executionTime
+        << "s, length=" << result.bestLength
+        << ", found=" << (result.pathFound ? "yes" : "no")
+        << endl;
+}
 
-    if (result.pathFound) {
-        cout << result.bestLength;
-    }
-    else {
-        cout << "NO_PATH";
+void TestRunner::runDynamicTest(const string& filePath,
+    const string& testName,
+    int dynamicStates,
+    int iterationsPerState) {
+
+    bool fileLoaded;
+    vector<vector<double>> graph;
+    vector<string> labels;
+    int start = -1;
+    int end = -1;
+
+    readGraphFromFile(filePath, fileLoaded, graph, labels, start, end);
+
+    if (!fileLoaded || graph.empty()) {
+        cerr << "  Failed to load graph: " << filePath << endl;
+        return;
     }
 
-    cout << ", found=" << (result.pathFound ? "yes" : "no")
-        << ", iterations=" << result.iterations << endl;
+    cout << "  Dynamic test started" << endl;
+
+    DynamicEnvironment env(graph, 42);
+    AntColony colony(graph, labels, start, end);
+
+    auto startTime = chrono::high_resolution_clock::now();
+
+    for (int state = 0; state < dynamicStates; state++) {
+
+        cout << "   -> State " << state + 1
+            << "/" << dynamicStates << endl;
+
+        const auto& currentGraph = env.getGraph();
+
+        colony.setGraph(currentGraph);
+
+        for (int i = 0; i < iterationsPerState; i++) {
+            colony.singleIteration();
+        }
+
+        auto result = colony.getResult();
+
+        saveDynamicStateResult(
+            testName,
+            state,
+            result.bestLength,
+            colony.getPheromoneLoadMetric(),
+            env.getLastChangeMagnitude()
+        );
+
+        env.update();
+    }
+
+    auto finalResult = colony.getResult();
+
+    auto endTime = chrono::high_resolution_clock::now();
+    double executionTime =
+        chrono::duration<double>(endTime - startTime).count();
+
+    TestResult testResult;
+    testResult.testName = testName;
+    testResult.executionTime = executionTime;
+    testResult.bestPathLength = finalResult.bestLength;
+    testResult.vertices = graph.size();
+    testResult.edges = countEdges(graph);
+    testResult.foundPath = finalResult.pathFound;
+    testResult.iterations = finalResult.totalIterations;
+
+    results.push_back(testResult);
+
+    cout << "  Final dynamic result: length="
+        << finalResult.bestLength
+        << endl;
+}
+
+void TestRunner::saveDynamicStateResult(
+    const string& testName,
+    int state,
+    double bestLength,
+    double pheromoneLoad,
+    double graphChangeMagnitude)
+{
+    DynamicStateResult r;
+    r.testName = testName;
+    r.state = state;
+    r.bestLength = bestLength;
+    r.pheromoneLoad = pheromoneLoad;
+    r.graphChangeMagnitude = graphChangeMagnitude;
+
+    dynamicResults.push_back(r);
+}
+
+void TestRunner::saveDynamicResultsToCSV(const string& filename) {
+
+    ofstream file(filename);
+
+    if (!file.is_open()) {
+        cerr << "Cannot open dynamic results file\n";
+        return;
+    }
+
+    file << "TestName,State,BestLength,PheromoneLoad,GraphChange\n";
+
+    for (const auto& r : dynamicResults) {
+        file << r.testName << ","
+            << r.state << ","
+            << r.bestLength << ","
+            << r.pheromoneLoad << ","
+            << r.graphChangeMagnitude << "\n";
+    }
+
+    cout << "Dynamic results saved to: "
+        << filename << endl;
 }
 
 void TestRunner::saveResultsToCSV(const string& filename) {
