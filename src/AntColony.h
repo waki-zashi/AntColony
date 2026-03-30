@@ -1,50 +1,68 @@
 #pragma once
+
 #include <vector>
 #include <string>
 #include <random>
-
-using namespace std;
+#include <limits>
 
 struct Ant {
-    vector<int> path;
-    vector<bool> visited;
+    std::vector<int> path;
+    std::vector<bool> visited;
     double pathLength;
-    Ant(int n);
+
+    explicit Ant(int n);
 };
 
 struct ACOResult {
-    vector<int> bestPath;
-    string bestPathLabels;
+    std::vector<int> bestPath;
+    std::string bestPathLabels;
     double bestLength;
     int iterations;
     bool pathFound;
 
-    ACOResult() : bestLength(std::numeric_limits<double>::max()), iterations(0), pathFound(false) {}
+    ACOResult()
+        : bestLength(std::numeric_limits<double>::max()),
+          iterations(0),
+          pathFound(false) {}
 };
 
 class AntColony {
 private:
     int n;
-    int start, end;
-    vector<vector<double>> graph;
-    vector<vector<double>> pheromone;
-    vector<string> labels;
+    int start;
+    int end;
 
-    double alpha = 1.0;
-    double beta = 5.0;
-    double evaporation = 0.5;
-    double Q = 100.0;
-    int numAnts = 10;
+    std::vector<std::vector<double>> graph;
+    std::vector<std::vector<double>> pheromone;
+    std::vector<std::string> labels;
+
+    double alpha;
+    double beta;
+    double evaporation;
+    double Q;
+
+    int numAnts;
     int maxIterations;
-    int stagnationLimit = 5;
+    int stagnationLimit;
+
+    double tauMin;
+    double tauMax;
 
     std::mt19937 gen;
     std::uniform_real_distribution<> dist;
 
-    int selectNext(Ant& ant, int current);
+private:
+    int selectNext(const Ant& ant, int current);
+    void evaporatePheromones();
+    void clampPheromones();
+    void depositPath(const std::vector<int>& path, double pathLength, double multiplier = 1.0);
+    std::string buildPathLabels(const std::vector<int>& path) const;
 
 public:
-    AntColony(const vector<vector<double>>& g, const vector<string>& names, int s, int e);
+    AntColony(const std::vector<std::vector<double>>& g,
+              const std::vector<std::string>& names,
+              int s,
+              int e);
 
     ACOResult run();
 };

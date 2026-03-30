@@ -51,10 +51,12 @@ private:
 public:
     void loadResults(const string& acoFile, const string& dijkstraFile,
         const string& astarFile, const string& floydFile) {
-        algorithmResults["ACO"] = loadCSV(acoFile);
-        algorithmResults["Dijkstra"] = loadCSV(dijkstraFile);
-        algorithmResults["A*"] = loadCSV(astarFile);
-        algorithmResults["Floyd-Warshall"] = loadCSV(floydFile);
+        const string resultDir = "results/";
+        
+        algorithmResults["ACO"] = loadCSV(resultDir + acoFile);
+        algorithmResults["Dijkstra"] = loadCSV(resultDir + dijkstraFile);
+        algorithmResults["A*"] = loadCSV(resultDir + astarFile);
+        algorithmResults["Floyd-Warshall"] = loadCSV(resultDir + floydFile);
 
         algorithmNames = { "ACO", "Dijkstra", "A*", "Floyd-Warshall" };
     }

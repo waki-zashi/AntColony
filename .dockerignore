@@ -1,0 +1,9 @@
+build
+bin
+obj
+*.o
+*.exe
+*.out
+.git
+.gitignore
+.gitattributes

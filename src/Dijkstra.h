@@ -195,6 +195,6 @@ public:
 
         cout << "\n=== Completed " << testCount << " tests ===" << endl;
         printSummary();
-        saveResultsToCSV("dijkstra_results.csv");
+        saveResultsToCSV("results/dijkstra_results.csv");
     }
 };

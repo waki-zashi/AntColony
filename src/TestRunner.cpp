@@ -93,7 +93,7 @@ void TestRunner::runTestSuite(const string& testDirectory) {
 
     cout << "\n=== Completed " << testCount << " tests ===" << endl;
     printSummary();
-    saveResultsToCSV("aco_results.csv");
+    saveResultsToCSV("results/aco_results.csv");
 }
 
 void TestRunner::runSingleTest(const string& graphFile, const string& testName) {
