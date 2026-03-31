@@ -1,14 +1,17 @@
 #include "TestRunner.h"
 #include "AntColony.h"
 #include "FileReader.h"
+
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <filesystem>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 int TestRunner::countEdges(const vector<vector<double>>& graph) {
-    int n = graph.size();
+    int n = static_cast<int>(graph.size());
     int edgeCount = 0;
 
     for (int i = 0; i < n; i++) {
@@ -29,7 +32,7 @@ bool TestRunner::fileExists(const string& filename) {
 
 vector<string> readTestFilesList(const string& testDirectory) {
     vector<string> files;
-    string listFile = testDirectory + "/test_files_list.txt";
+    const string listFile = testDirectory + "/test_files_list.txt";
 
     ifstream file(listFile);
     if (!file.is_open()) {
@@ -44,11 +47,20 @@ vector<string> readTestFilesList(const string& testDirectory) {
         }
     }
 
-    file.close();
     return files;
 }
 
+string TestRunner::getDefaultOutputFile() const {
+    return "results/aco_results.csv";
+}
+
+void TestRunner::clearResults() {
+    results.clear();
+}
+
 void TestRunner::runTestSuite(const string& testDirectory) {
+    clearResults();
+
     cout << "=== ACO Algorithm Test Suite ===" << endl;
     cout << "Looking for test files in: " << testDirectory << endl;
 
@@ -63,11 +75,11 @@ void TestRunner::runTestSuite(const string& testDirectory) {
     cout << "Found " << testFiles.size() << " test files in the list." << endl;
 
     int testCount = 0;
-    const int maxTests = min(100, (int)testFiles.size());
+    const int maxTests = min(100, static_cast<int>(testFiles.size()));
 
     for (size_t i = 0; i < testFiles.size() && testCount < maxTests; i++) {
-        string filename = testFiles[i];
-        string fullPath = testDirectory + "/" + filename;
+        const string filename = testFiles[i];
+        const string fullPath = testDirectory + "/" + filename;
 
         if (!fileExists(fullPath)) {
             cout << "Warning: File from list not found: " << fullPath << endl;
@@ -75,7 +87,7 @@ void TestRunner::runTestSuite(const string& testDirectory) {
         }
 
         string testName = filename;
-        size_t dotPos = testName.find_last_of(".");
+        const size_t dotPos = testName.find_last_of(".");
         if (dotPos != string::npos) {
             testName = testName.substr(0, dotPos);
         }
@@ -93,11 +105,11 @@ void TestRunner::runTestSuite(const string& testDirectory) {
 
     cout << "\n=== Completed " << testCount << " tests ===" << endl;
     printSummary();
-    saveResultsToCSV("results/aco_results.csv");
+    saveResultsToCSV(getDefaultOutputFile());
 }
 
 void TestRunner::runSingleTest(const string& graphFile, const string& testName) {
-    bool fileLoaded;
+    bool fileLoaded = false;
     vector<vector<double>> graph;
     vector<string> labels;
     int start = -1;
@@ -110,21 +122,11 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
         return;
     }
 
-    int n = labels.size();
+    const int n = static_cast<int>(labels.size());
     if (n == 0) {
         cerr << "  Empty graph: " << graphFile << endl;
         return;
     }
-
-    /*random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<int> dist(0, n - 1);
-
-    int start = dist(gen);
-    int end;
-    do {
-        end = dist(gen);
-    } while (end == start);*/
 
     cout << "  Path: " << labels[start] << " -> " << labels[end];
     cout << " (vertices: " << n << ", edges: " << countEdges(graph) << ")" << endl;
@@ -132,15 +134,14 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
     AntColony colony(graph, labels, start, end);
 
     auto startTime = chrono::high_resolution_clock::now();
-
     ACOResult result = colony.run();
-
     auto endTime = chrono::high_resolution_clock::now();
-    double executionTime = chrono::duration<double>(endTime - startTime).count();
+
+    const double executionTime = chrono::duration<double>(endTime - startTime).count();
 
     string pathSequence = "NO_PATH";
     if (result.pathFound && !result.bestPath.empty()) {
-        pathSequence = "";
+        pathSequence.clear();
         for (size_t i = 0; i < result.bestPath.size(); i++) {
             pathSequence += labels[result.bestPath[i]];
             if (i < result.bestPath.size() - 1) {
@@ -162,19 +163,19 @@ void TestRunner::runSingleTest(const string& graphFile, const string& testName) 
     results.push_back(testResult);
 
     cout << "  Result: time=" << executionTime << "s, length=";
-
     if (result.pathFound) {
         cout << result.bestLength;
-    }
-    else {
+    } else {
         cout << "NO_PATH";
     }
 
     cout << ", found=" << (result.pathFound ? "yes" : "no")
-        << ", iterations=" << result.iterations << endl;
+         << ", iterations=" << result.iterations << endl;
 }
 
 void TestRunner::saveResultsToCSV(const string& filename) {
+    fs::create_directories(fs::path(filename).parent_path());
+
     ofstream file(filename);
     if (!file.is_open()) {
         cerr << "Cannot open results file: " << filename << endl;
@@ -185,13 +186,13 @@ void TestRunner::saveResultsToCSV(const string& filename) {
 
     for (const auto& result : results) {
         file << result.testName << ","
-            << result.vertices << ","
-            << result.edges << ","
-            << result.executionTime << ","
-            << result.bestPathLength << ","
-            << (result.foundPath ? "true" : "false") << ","
-            << result.iterations << ","
-            << "\"" << result.bestPathSequence << "\"" << "\n";
+             << result.vertices << ","
+             << result.edges << ","
+             << result.executionTime << ","
+             << result.bestPathLength << ","
+             << (result.foundPath ? "true" : "false") << ","
+             << result.iterations << ","
+             << "\"" << result.bestPathSequence << "\"\n";
     }
 
     cout << "Results saved to: " << filename << endl;
@@ -220,7 +221,7 @@ void TestRunner::printSummary() {
     cout << "\n=== TEST SUMMARY ===" << endl;
     cout << "Total tests: " << results.size() << endl;
     cout << "Successful: " << successfulTests << " ("
-        << (successfulTests * 100.0 / results.size()) << "%)" << endl;
+         << (successfulTests * 100.0 / results.size()) << "%)" << endl;
     cout << "Total time: " << totalTime << " seconds" << endl;
     cout << "Average time: " << totalTime / results.size() << " seconds" << endl;
     cout << "Average vertices: " << totalVertices / results.size() << endl;

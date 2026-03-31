@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 #include <string>
 #include <chrono>
@@ -28,8 +29,11 @@ public:
     int countEdges(const vector<vector<double>>& graph);
     bool fileExists(const string& filename);
 
+    virtual string getDefaultOutputFile() const;
     virtual void runTestSuite(const string& testDirectory);
     virtual void runSingleTest(const string& graphFile, const string& testName);
+
+    void clearResults();
     void saveResultsToCSV(const string& filename);
     void printSummary();
 };

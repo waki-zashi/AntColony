@@ -1,10 +1,18 @@
 #pragma once
+
 #include "GraphGenerator.h"
-#include <fstream>
 #include <string>
+#include <vector>
 
-using namespace std;
+void tryGenerateConnected(int countVertex,
+                          double density,
+                          const std::string& graphType,
+                          GraphGenerator& generator,
+                          const std::string& testDir,
+                          int& testCount,
+                          std::vector<std::string>& generatedTestFiles);
 
-void tryGenerateConnected(int countVertex, double density, const string graphType, GraphGenerator& generator);
-void saveFilesList();
-void generateConnectedTestSuite();
+void saveFilesList(const std::string& testDir,
+                   const std::vector<std::string>& generatedTestFiles);
+
+void generateConnectedTestSuite(const std::string& testDir = "data/test_cases");

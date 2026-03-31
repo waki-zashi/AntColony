@@ -1,16 +1,23 @@
-#include "GraphGenerator.h"
+#include "GenerateTestSuite.h"
+
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <algorithm>
+#include <filesystem>
 
 using namespace std;
+namespace fs = std::filesystem;
 
-string testDir = "test_cases";
-const int maxAttempts = 10;
-int testCount = 0;
-vector<string> generatedTestFiles;
+static const int maxAttempts = 10;
 
-void tryGenerateConnected(int countVertex, double density, const string graphType, GraphGenerator& generator) {
+void tryGenerateConnected(int countVertex,
+                          double density,
+                          const string& graphType,
+                          GraphGenerator& generator,
+                          const string& testDir,
+                          int& testCount,
+                          vector<string>& generatedTestFiles) {
     bool connected = false;
     vector<vector<double>> graph;
     vector<string> labels;
@@ -25,8 +32,8 @@ void tryGenerateConnected(int countVertex, double density, const string graphTyp
 
     if (connected) {
         string filename = "test_" + to_string(testCount) +
-            graphType + to_string(countVertex) + "v_d" +
-            to_string((int)(density * 100)) + ".csv";
+                          graphType + to_string(countVertex) + "v_d" +
+                          to_string(static_cast<int>(density * 100)) + ".csv";
         string fullPath = testDir + "/" + filename;
 
         generator.saveGraphToFile(graph, labels, fullPath);
@@ -38,14 +45,15 @@ void tryGenerateConnected(int countVertex, double density, const string graphTyp
             cout << " (attempts: " << attempts << ")";
         }
         cout << endl;
-    }
-    else {
-        cout << "  Failed to generate connected graph for n=" << countVertex << ", density=" << density << endl;
+    } else {
+        cout << "  Failed to generate connected graph for n=" << countVertex
+             << ", density=" << density << endl;
     }
 }
 
-void saveFilesList() {
-    string listFilePath = testDir + "/test_files_list.txt";
+void saveFilesList(const string& testDir,
+                   const vector<string>& generatedTestFiles) {
+    const string listFilePath = testDir + "/test_files_list.txt";
     ofstream listFile(listFilePath);
 
     if (!listFile.is_open()) {
@@ -62,31 +70,33 @@ void saveFilesList() {
     cout << "Total files in list: " << generatedTestFiles.size() << endl;
 }
 
-void generateConnectedTestSuite() {
+void generateConnectedTestSuite(const string& testDir) {
     GraphGenerator generator(42);
 
-    generatedTestFiles.clear();
+    int testCount = 0;
+    vector<string> generatedTestFiles;
 
-    system(("mkdir " + testDir).c_str());
+    fs::create_directories(testDir);
 
     cout << "Generating CONNECTED test graphs..." << endl;
+    cout << "Output directory: " << testDir << endl;
 
     cout << "1. Random connected graphs..." << endl;
 
     for (int n = 5; n <= 15; n += 2) {
         for (double density : {0.3, 0.6, 0.9}) {
-            tryGenerateConnected(n, density, "_small_", generator);
+            tryGenerateConnected(n, density, "_small_", generator, testDir, testCount, generatedTestFiles);
         }
     }
 
     for (int n = 16; n <= 50; n += 5) {
         for (double density : {0.4, 0.8}) {
-            tryGenerateConnected(n, density, "_medium_", generator);
+            tryGenerateConnected(n, density, "_medium_", generator, testDir, testCount, generatedTestFiles);
         }
     }
 
     for (int n = 51; n <= 100; n += 5) {
-        tryGenerateConnected(n, 0.4, "_big_", generator);
+        tryGenerateConnected(n, 0.4, "_big_", generator, testDir, testCount, generatedTestFiles);
     }
 
     cout << "2. Special connected graphs..." << endl;
@@ -122,7 +132,8 @@ void generateConnectedTestSuite() {
             auto graph = generator.generateGridGraph(rows, cols);
             auto labels = generator.generateLabels(rows * cols);
 
-            string filename = "test_" + to_string(testCount) + "_grid_" + to_string(rows) + "x" + to_string(cols) + ".csv";
+            string filename = "test_" + to_string(testCount) + "_grid_" +
+                              to_string(rows) + "x" + to_string(cols) + ".csv";
             string fullPath = testDir + "/" + filename;
 
             generator.saveGraphToFile(graph, labels, fullPath);
@@ -145,7 +156,7 @@ void generateConnectedTestSuite() {
         cout << "  Created: " << filename << endl;
     }
 
-    saveFilesList();
+    saveFilesList(testDir, generatedTestFiles);
 
     cout << "\n=== GENERATION COMPLETE ===" << endl;
     cout << "Total graphs generated: " << testCount << endl;
@@ -155,7 +166,7 @@ void generateConnectedTestSuite() {
 
     if (!generatedTestFiles.empty()) {
         cout << "\nExample files:" << endl;
-        for (int i = 0; i < min(5, (int)generatedTestFiles.size()); i++) {
+        for (int i = 0; i < min(5, static_cast<int>(generatedTestFiles.size())); i++) {
             cout << "  " << generatedTestFiles[i] << endl;
         }
         if (generatedTestFiles.size() > 5) {

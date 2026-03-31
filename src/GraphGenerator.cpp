@@ -1,212 +1,238 @@
 #include "GraphGenerator.h"
-#include <iostream>
-#include <vector>
-#include <string>
-#include <random>
+
 #include <fstream>
 #include <queue>
+#include <stdexcept>
+#include <filesystem>
 #include <algorithm>
-#include <cmath>
+#include <random>
 
 using namespace std;
 
-vector<vector<double>> GraphGenerator::generateConnectedRandomGraph(int n, double density) {
-    if (n <= 0) return {};
-    if (n == 1) return { {0.0} };
+GraphGenerator::GraphGenerator(unsigned int seed)
+    : gen(seed) {}
 
-    vector<vector<double>> graph(n, vector<double>(n, 0.0));
-    uniform_real_distribution<double> weightDist(1.0, 10.0);
-
-    vector<bool> inTree(n, false);
-    vector<int> treeVertices;
-
-    int startVertex = uniform_int_distribution<int>(0, n - 1)(gen);
-    inTree[startVertex] = true;
-    treeVertices.push_back(startVertex);
-
-    while (treeVertices.size() < n) {
-        int randomIndex = uniform_int_distribution<int>(0, treeVertices.size() - 1)(gen);
-        int u = treeVertices[randomIndex];
-
-        int v;
-        do {
-            v = uniform_int_distribution<int>(0, n - 1)(gen);
-        } while (inTree[v]);
-
-        double weight = weightDist(gen);
-        graph[u][v] = weight;
-        graph[v][u] = weight;
-
-        inTree[v] = true;
-        treeVertices.push_back(v);
-    }
-
-    uniform_real_distribution<double> probDist(0.0, 1.0);
-
-    int currentEdges = n - 1;
-    int maxPossibleEdges = n * (n - 1) / 2;
-    int targetEdges = max(currentEdges, static_cast<int>(density * maxPossibleEdges));
-
-    while (currentEdges < targetEdges) {
-        int u = uniform_int_distribution<int>(0, n - 1)(gen);
-        int v = uniform_int_distribution<int>(0, n - 1)(gen);
-
-        if (u != v && graph[u][v] == 0.0) {
-            if (probDist(gen) < 0.3) { 
-                double weight = weightDist(gen);
-                graph[u][v] = weight;
-                graph[v][u] = weight;
-                currentEdges++;
-            }
-        }
-    }
-
-    return graph;
+double GraphGenerator::randomWeight(double minW, double maxW) {
+    uniform_real_distribution<double> dist(minW, maxW);
+    return dist(gen);
 }
 
-vector<vector<double>> GraphGenerator::generateGridGraph(int rows, int cols) {
-    int n = rows * cols;
+void GraphGenerator::addUndirectedEdge(vector<vector<double>>& graph, int u, int v, double w) {
+    if (u == v) return;
+    graph[u][v] = w;
+    graph[v][u] = w;
+}
+
+vector<vector<double>> GraphGenerator::generateConnectedRandomGraph(int n, double density) {
+    if (n <= 0) {
+        return {};
+    }
+
+    if (density < 0.0) density = 0.0;
+    if (density > 1.0) density = 1.0;
+
     vector<vector<double>> graph(n, vector<double>(n, 0.0));
-    uniform_real_distribution<double> weightDist(1.0, 5.0);
 
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            int current = i * cols + j;
+    for (int i = 1; i < n; ++i) {
+        uniform_int_distribution<int> parentDist(0, i - 1);
+        int parent = parentDist(gen);
+        addUndirectedEdge(graph, i, parent, randomWeight());
+    }
 
-            if (j < cols - 1) {
-                int right = i * cols + (j + 1);
-                double weight = weightDist(gen);
-                graph[current][right] = weight;
-                graph[right][current] = weight;
-            }
+    const int maxEdges = n * (n - 1) / 2;
+    const int minEdges = n - 1;
+    int targetEdges = static_cast<int>(density * maxEdges);
 
-            if (i < rows - 1) {
-                int down = (i + 1) * cols + j;
-                double weight = weightDist(gen);
-                graph[current][down] = weight;
-                graph[down][current] = weight;
+    if (targetEdges < minEdges) {
+        targetEdges = minEdges;
+    }
+    if (targetEdges > maxEdges) {
+        targetEdges = maxEdges;
+    }
+
+    int currentEdges = minEdges;
+
+    vector<pair<int, int>> missingEdges;
+    missingEdges.reserve(maxEdges);
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            if (graph[i][j] == 0.0) {
+                missingEdges.push_back({i, j});
             }
         }
+    }
+
+    std::shuffle(missingEdges.begin(), missingEdges.end(), gen);
+
+    for (const auto& [u, v] : missingEdges) {
+        if (currentEdges >= targetEdges) {
+            break;
+        }
+        addUndirectedEdge(graph, u, v, randomWeight());
+        currentEdges++;
     }
 
     return graph;
 }
 
 vector<vector<double>> GraphGenerator::generateStarGraph(int n) {
-    vector<vector<double>> graph(n, vector<double>(n, 0.0));
-    uniform_real_distribution<double> weightDist(1.0, 5.0);
+    if (n <= 0) {
+        return {};
+    }
 
-    for (int i = 1; i < n; i++) {
-        double weight = weightDist(gen);
-        graph[0][i] = weight;
-        graph[i][0] = weight;
+    vector<vector<double>> graph(n, vector<double>(n, 0.0));
+    const int center = 0;
+
+    for (int i = 1; i < n; ++i) {
+        addUndirectedEdge(graph, center, i, randomWeight());
     }
 
     return graph;
 }
 
 vector<vector<double>> GraphGenerator::generatePathGraph(int n) {
-    vector<vector<double>> graph(n, vector<double>(n, 0.0));
-    uniform_real_distribution<double> weightDist(1.0, 3.0);
+    if (n <= 0) {
+        return {};
+    }
 
-    for (int i = 0; i < n - 1; i++) {
-        double weight = weightDist(gen);
-        graph[i][i + 1] = weight;
-        graph[i + 1][i] = weight;
+    vector<vector<double>> graph(n, vector<double>(n, 0.0));
+
+    for (int i = 0; i + 1 < n; ++i) {
+        addUndirectedEdge(graph, i, i + 1, randomWeight());
+    }
+
+    return graph;
+}
+
+vector<vector<double>> GraphGenerator::generateGridGraph(int rows, int cols) {
+    if (rows <= 0 || cols <= 0) {
+        return {};
+    }
+
+    const int n = rows * cols;
+    vector<vector<double>> graph(n, vector<double>(n, 0.0));
+
+    auto id = [cols](int r, int c) {
+        return r * cols + c;
+    };
+
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            if (r + 1 < rows) {
+                addUndirectedEdge(graph, id(r, c), id(r + 1, c), randomWeight());
+            }
+            if (c + 1 < cols) {
+                addUndirectedEdge(graph, id(r, c), id(r, c + 1), randomWeight());
+            }
+        }
     }
 
     return graph;
 }
 
 vector<vector<double>> GraphGenerator::generateCompleteGraph(int n) {
-    vector<vector<double>> graph(n, vector<double>(n, 0.0));
-    uniform_real_distribution<double> weightDist(1.0, 10.0);
+    if (n <= 0) {
+        return {};
+    }
 
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            double weight = weightDist(gen);
-            graph[i][j] = weight;
-            graph[j][i] = weight;
+    vector<vector<double>> graph(n, vector<double>(n, 0.0));
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            addUndirectedEdge(graph, i, j, randomWeight());
         }
     }
 
     return graph;
 }
 
-bool GraphGenerator::isConnected(const vector<vector<double>>& graph) {
-    int n = graph.size();
-    if (n == 0) return true;
+vector<string> GraphGenerator::generateLabels(int n) {
+    vector<string> labels;
+    labels.reserve(n);
+
+    for (int i = 0; i < n; ++i) {
+        if (i < 26) {
+            labels.push_back(string(1, static_cast<char>('A' + i)));
+        } else {
+            labels.push_back("V" + to_string(i + 1));
+        }
+    }
+
+    return labels;
+}
+
+bool GraphGenerator::isConnected(const vector<vector<double>>& graph) const {
+    const int n = static_cast<int>(graph.size());
+    if (n == 0) {
+        return true;
+    }
 
     vector<bool> visited(n, false);
     queue<int> q;
-    int visitedCount = 0;
 
-    q.push(0);
     visited[0] = true;
-    visitedCount++;
+    q.push(0);
 
     while (!q.empty()) {
-        int current = q.front();
+        int u = q.front();
         q.pop();
 
-        for (int neighbor = 0; neighbor < n; neighbor++) {
-            if (graph[current][neighbor] > 0 && !visited[neighbor]) {
-                visited[neighbor] = true;
-                visitedCount++;
-                q.push(neighbor);
+        for (int v = 0; v < n; ++v) {
+            if (graph[u][v] > 0.0 && !visited[v]) {
+                visited[v] = true;
+                q.push(v);
             }
         }
     }
 
-    return (visitedCount == n);
-}
-
-vector<string> GraphGenerator::generateLabels(int n) {
-    vector<string> labels;
-    for (int i = 0; i < n; i++) {
-        if (i < 26) {
-            labels.push_back(string(1, 'A' + i));
-        }
-        else {
-            labels.push_back("V" + to_string(i + 1));
+    for (bool seen : visited) {
+        if (!seen) {
+            return false;
         }
     }
-    return labels;
+
+    return true;
 }
 
 void GraphGenerator::saveGraphToFile(const vector<vector<double>>& graph,
-    const vector<string>& labels,
-    const string& filename) {
-    ofstream file(filename);
+                                     const vector<string>& labels,
+                                     const string& filename) {
+    namespace fs = std::filesystem;
 
-    if (!file.is_open()) {
-        cerr << "Cannot open file for writing: " << filename << endl;
-        return;
+    const int n = static_cast<int>(graph.size());
+    if (n == 0 || static_cast<int>(labels.size()) != n) {
+        throw runtime_error("Invalid graph or labels in saveGraphToFile()");
     }
 
-    for (size_t i = 0; i < labels.size(); i++) {
+    fs::create_directories(fs::path(filename).parent_path());
+
+    ofstream file(filename);
+    if (!file.is_open()) {
+        throw runtime_error("Cannot open file for writing: " + filename);
+    }
+
+    file << ",";
+    for (int i = 0; i < n; ++i) {
         file << labels[i];
-        if (i < labels.size() - 1) file << ",";
+        if (i + 1 < n) file << ",";
     }
     file << "\n";
 
-    for (const auto& row : graph) {
-        for (size_t j = 0; j < row.size(); j++) {
-            file << row[j];
-            if (j < row.size() - 1) file << ",";
+    for (int i = 0; i < n; ++i) {
+        file << labels[i];
+        for (int j = 0; j < n; ++j) {
+            file << "," << graph[i][j];
         }
         file << "\n";
     }
 
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<int> dist(0, graph.size() - 1);
-
+    uniform_int_distribution<int> dist(0, n - 1);
     int start = dist(gen);
-    int end;
-    do {
+    int end = dist(gen);
+    while (end == start && n > 1) {
         end = dist(gen);
-    } while (end == start);
+    }
 
     file << start << "," << end << "\n";
 }
