@@ -50,6 +50,26 @@ namespace {
         oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
         return oss.str();
     }
+
+    int countTestsInListFile(const fs::path& listFile) {
+        if (!fs::exists(listFile) || !fs::is_regular_file(listFile)) {
+            return 0;
+        }
+
+        ifstream file(listFile.string());
+        if (!file.is_open()) {
+            return 0;
+        }
+
+        int count = 0;
+        string line;
+        while (getline(file, line)) {
+            if (!line.empty()) {
+                count++;
+            }
+        }
+        return count;
+    }
 }
 
 PipelineRunner::PipelineRunner(std::string testDirectory)
@@ -63,10 +83,15 @@ bool PipelineRunner::ensureTestSuiteExists() const {
     const fs::path dir(testDirectory);
     const fs::path listFile = dir / "test_files_list.txt";
 
-    return fs::exists(dir) &&
-           fs::is_directory(dir) &&
-           fs::exists(listFile) &&
-           fs::is_regular_file(listFile);
+    if (!(fs::exists(dir) &&
+          fs::is_directory(dir) &&
+          fs::exists(listFile) &&
+          fs::is_regular_file(listFile))) {
+        return false;
+    }
+
+    const int testCount = countTestsInListFile(listFile);
+    return testCount == 100;
 }
 
 void PipelineRunner::clearResultsDirectory() const {
@@ -79,6 +104,9 @@ void PipelineRunner::clearResultsDirectory() const {
         "results/fw_results.csv",
         "results/detailed_comparison.csv",
         "results/summary_comparison.csv",
+        "results/per_test_comparison.csv",
+        "results/category_comparison.csv",
+        "results/algorithm_rankings.csv",
         "results/experiment_meta.json"
     };
 
@@ -98,6 +126,8 @@ void PipelineRunner::writeExperimentMetadata(const string& mode) const {
         return;
     }
 
+    const fs::path listFile = fs::path(testDirectory) / "test_files_list.txt";
+    const int suiteCount = countTestsInListFile(listFile);
     const bool hasSuite = ensureTestSuiteExists();
 
     file << "{\n";
@@ -105,6 +135,8 @@ void PipelineRunner::writeExperimentMetadata(const string& mode) const {
     file << "  \"mode\": \"" << escapeJson(mode) << "\",\n";
     file << "  \"test_directory\": \"" << escapeJson(testDirectory) << "\",\n";
     file << "  \"test_suite_exists\": " << (hasSuite ? "true" : "false") << ",\n";
+    file << "  \"detected_test_count\": " << suiteCount << ",\n";
+    file << "  \"expected_test_count\": 100,\n";
     file << "  \"results_directory\": \"results\",\n";
     file << "  \"expected_result_files\": [\n";
     file << "    \"results/aco_results.csv\",\n";
@@ -112,7 +144,10 @@ void PipelineRunner::writeExperimentMetadata(const string& mode) const {
     file << "    \"results/astar_results.csv\",\n";
     file << "    \"results/fw_results.csv\",\n";
     file << "    \"results/detailed_comparison.csv\",\n";
-    file << "    \"results/summary_comparison.csv\"\n";
+    file << "    \"results/summary_comparison.csv\",\n";
+    file << "    \"results/per_test_comparison.csv\",\n";
+    file << "    \"results/category_comparison.csv\",\n";
+    file << "    \"results/algorithm_rankings.csv\"\n";
     file << "  ],\n";
     file << "  \"pipeline\": {\n";
     file << "    \"generate_if_missing\": true,\n";
@@ -124,7 +159,7 @@ void PipelineRunner::writeExperimentMetadata(const string& mode) const {
 
 void PipelineRunner::generateTests() const {
     cout << "=== GENERATING TEST SUITE ===" << endl;
-    generateConnectedTestSuite(testDirectory);
+    generateFullTestSuite(testDirectory);
     cout << "=== TEST GENERATION COMPLETE ===" << endl;
 }
 
@@ -189,6 +224,9 @@ void PipelineRunner::analyzeResults() const {
     cout << "Results saved to:" << endl;
     cout << "- results/detailed_comparison.csv" << endl;
     cout << "- results/summary_comparison.csv" << endl;
+    cout << "- results/per_test_comparison.csv" << endl;
+    cout << "- results/category_comparison.csv" << endl;
+    cout << "- results/algorithm_rankings.csv" << endl;
 }
 
 void PipelineRunner::fullPipeline(bool generateIfMissing) const {
@@ -197,7 +235,7 @@ void PipelineRunner::fullPipeline(bool generateIfMissing) const {
 
     if (!ensureTestSuiteExists()) {
         if (!generateIfMissing) {
-            cerr << "Error: test suite not found in " << testDirectory << endl;
+            cerr << "Error: valid 100-test suite not found in " << testDirectory << endl;
             cerr << "Run with --generate-tests first." << endl;
             return;
         }

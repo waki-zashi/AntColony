@@ -16,3 +16,6 @@ void saveFilesList(const std::string& testDir,
                    const std::vector<std::string>& generatedTestFiles);
 
 void generateConnectedTestSuite(const std::string& testDir = "data/test_cases");
+void generateLargeTestSuite(const std::string& testDir = "data/test_cases");
+
+void generateFullTestSuite(const std::string& testDir = "data/test_cases");

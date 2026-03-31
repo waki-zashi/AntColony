@@ -18,11 +18,11 @@ namespace {
     void printHelp() {
         cout << "Usage:\n";
         cout << "  ./aco --help\n";
-        cout << "  ./aco --interactive\n";
+        // cout << "  ./aco --interactive\n";
         cout << "  ./aco --single <graph_file>\n";
         cout << "  ./aco --generate-tests [--test-dir <dir>]\n";
         cout << "  ./aco --run <aco|dj|fw|astar> [--test-dir <dir>]\n";
-        cout << "  ./aco --run-all [--test-dir <dir>]\n";
+        // cout << "  ./aco --run-all [--test-dir <dir>]\n";
         cout << "  ./aco --analyze\n";
         cout << "  ./aco --full-pipeline [--test-dir <dir>]\n";
     }

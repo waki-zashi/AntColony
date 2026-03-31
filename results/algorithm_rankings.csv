@@ -1,0 +1,17 @@
+Metric,OrderIndex,Algorithm,DisplayedValue,Unit
+Speed,1,Dijkstra,4.32026e-05,s
+Speed,2,A*,4.59192e-05,s
+Speed,3,Floyd-Warshall,0.0173007,s
+Speed,4,ACO,0.691301,s
+Reliability,1,A*,100,%
+Reliability,2,Dijkstra,100,%
+Reliability,3,Floyd-Warshall,100,%
+Reliability,4,ACO,99,%
+Accuracy,1,A*,100,%
+Accuracy,2,Dijkstra,100,%
+Accuracy,3,Floyd-Warshall,100,%
+Accuracy,4,ACO,85.8586,%
+Error,1,A*,0,%
+Error,2,Dijkstra,-0,%
+Error,3,Floyd-Warshall,0,%
+Error,4,ACO,9.33016,%
