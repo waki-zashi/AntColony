@@ -94,7 +94,6 @@ void readGraphFromFile(const string& filename,
         delimiter = ' ';
     }
 
-    // Last line is start,end
     const string lastLine = allLines.back();
     const vector<string> lastTokens = splitLine(lastLine, delimiter);
 
@@ -107,7 +106,6 @@ void readGraphFromFile(const string& filename,
     start = stoi(lastTokens[0]);
     end = stoi(lastTokens[1]);
 
-    // All lines except the last are matrix-related
     vector<string> matrixLines(allLines.begin(), allLines.end() - 1);
     if (matrixLines.empty()) {
         cerr << "Error: adjacency matrix is missing: " << filename << endl;
@@ -115,7 +113,6 @@ void readGraphFromFile(const string& filename,
         return;
     }
 
-    // Detect whether first line is a header with labels
     vector<string> firstTokens = splitLine(matrixLines[0], delimiter);
     bool hasHeaderLabels = false;
 
@@ -137,8 +134,6 @@ void readGraphFromFile(const string& filename,
     bool rowLabelsPresent = false;
 
     if (hasHeaderLabels) {
-        // Header may look like: ,A,B,C   or   A,B,C
-        // If first token is empty, skip it; otherwise use all tokens as labels.
         if (!firstTokens.empty() && firstTokens[0].empty()) {
             labels.assign(firstTokens.begin() + 1, firstTokens.end());
         } else {
@@ -156,7 +151,6 @@ void readGraphFromFile(const string& filename,
             continue;
         }
 
-        // If rows start with a vertex label, drop the first token.
         if (rowLabelsPresent && !tokens.empty() && !isNumericToken(tokens[0])) {
             tokens.erase(tokens.begin());
         }
@@ -193,7 +187,6 @@ void readGraphFromFile(const string& filename,
         return;
     }
 
-    // Validate square matrix
     for (const auto& row : graph) {
         if (static_cast<int>(row.size()) != n) {
             cerr << "Error: adjacency matrix is not square in file " << filename << endl;
@@ -206,7 +199,6 @@ void readGraphFromFile(const string& filename,
         }
     }
 
-    // Generate labels if missing or mismatched
     if (labels.size() != static_cast<size_t>(n)) {
         labels.clear();
         labels.reserve(n);

@@ -22,4 +22,7 @@ public:
 
 private:
     std::string testDirectory;
+
+    void clearResultsDirectory() const;
+    void writeExperimentMetadata(const std::string& mode) const;
 };
