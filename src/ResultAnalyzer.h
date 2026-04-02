@@ -877,11 +877,11 @@ private:
              << cmpASTAR.maxRelativeErrorPct << ","
              << cmpFW.maxRelativeErrorPct << "\n";
 
-        file << "AvgTimeRatioVsDijkstra,"
-             << cmpACO.avgTimeRatioVsDijkstra << ","
-             << 1.0 << ","
-             << cmpASTAR.avgTimeRatioVsDijkstra << ","
-             << cmpFW.avgTimeRatioVsDijkstra << "\n";
+        // file << "AvgTimeRatioVsDijkstra,"
+        //      << cmpACO.avgTimeRatioVsDijkstra << ","
+        //      << 1.0 << ","
+        //      << cmpASTAR.avgTimeRatioVsDijkstra << ","
+        //      << cmpFW.avgTimeRatioVsDijkstra << "\n";
     }
 
     void savePerTestComparisonCSV(const string& filename) {
