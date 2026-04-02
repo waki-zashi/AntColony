@@ -6,6 +6,7 @@
 #include "AStar.h"
 #include "ResultAnalyzer.h"
 #include "GenerateTestSuite.h"
+#include "BellmanFord.h"
 
 #include <iostream>
 #include <filesystem>
@@ -98,6 +99,7 @@ void PipelineRunner::clearResultsDirectory() const {
     fs::create_directories("results");
 
     const vector<string> filesToRemove = {
+        "results/bellman_ford_results.csv",
         "results/aco_results.csv",
         "results/dijkstra_results.csv",
         "results/astar_results.csv",
@@ -141,6 +143,7 @@ void PipelineRunner::writeExperimentMetadata(const string& mode) const {
     file << "  \"expected_result_files\": [\n";
     file << "    \"results/aco_results.csv\",\n";
     file << "    \"results/dijkstra_results.csv\",\n";
+    file << "    \"results/bellman_ford_results.csv\",\n";
     file << "    \"results/astar_results.csv\",\n";
     file << "    \"results/fw_results.csv\",\n";
     file << "    \"results/detailed_comparison.csv\",\n";
@@ -151,7 +154,7 @@ void PipelineRunner::writeExperimentMetadata(const string& mode) const {
     file << "  ],\n";
     file << "  \"pipeline\": {\n";
     file << "    \"generate_if_missing\": true,\n";
-    file << "    \"run_algorithms\": [\"ACO\", \"Dijkstra\", \"A*\", \"Floyd-Warshall\"],\n";
+    file << "    \"run_algorithms\": [\"ACO\", \"Dijkstra\", \"Bellman-Ford\", \"A*\", \"Floyd-Warshall\"],\n";    
     file << "    \"analyze_after_run\": true\n";
     file << "  }\n";
     file << "}\n";
@@ -177,6 +180,13 @@ void PipelineRunner::runDijkstra() const {
     cout << "=== Dijkstra Testing complete ===" << endl;
 }
 
+void PipelineRunner::runBellmanFord() const {
+    cout << "=== Bellman-Ford Algorithm Test Suite ===" << endl;
+    BellmanFordTestRunner runner;
+    runner.runTestSuite(testDirectory);
+    cout << "=== Bellman-Ford Testing complete ===" << endl;
+}
+
 void PipelineRunner::runFloydWarshall() const {
     cout << "=== Floyd-Warshall Algorithm Test Suite ===" << endl;
     FloydWarshallTestRunner runner;
@@ -200,6 +210,9 @@ void PipelineRunner::runAllAlgorithms() const {
     runDijkstra();
     cout << endl;
 
+    runBellmanFord();
+    cout << endl;
+
     runFloydWarshall();
     cout << endl;
 
@@ -214,6 +227,7 @@ void PipelineRunner::analyzeResults() const {
     analyzer.loadResults(
         "aco_results.csv",
         "dijkstra_results.csv",
+        "bellman_ford_results.csv",
         "astar_results.csv",
         "fw_results.csv"
     );

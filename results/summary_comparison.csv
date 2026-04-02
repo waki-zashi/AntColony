@@ -1,7 +1,7 @@
-Metric,ACO,Dijkstra,A*,Floyd-Warshall
-SuccessRate,100,100,100,100
-AvgTime,0.696061,4.70298e-05,4.4186e-05,0.00211016
-TotalTime,69.6061,0.00470298,0.0044186,0.211016
-OptimalityRate,83,100,100,100
-AvgRelativeErrorPct,11.8299,0,0,0
-MaxRelativeErrorPct,220.305,0,0,0
+Metric,ACO,Dijkstra,Bellman-Ford,A*,Floyd-Warshall
+SuccessRate,100,100,100,100,100
+AvgTime,0.692703,4.50817e-05,8.3612e-05,4.34869e-05,0.0020523
+TotalTime,69.2703,0.00450817,0.0083612,0.00434869,0.20523
+OptimalityRate,87,100,100,100,100
+AvgRelativeErrorPct,6.18327,0,0,0,0
+MaxRelativeErrorPct,204.862,0,0,0,0

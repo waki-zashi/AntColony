@@ -104,16 +104,18 @@ public:
 
     void loadResults(const string& acoFile,
                      const string& dijkstraFile,
+                     const string& bellmanFordFile,
                      const string& astarFile,
                      const string& floydFile) {
         algorithmResults.clear();
 
         algorithmResults["ACO"] = loadCSV(joinPath(resultsDir, acoFile));
         algorithmResults["Dijkstra"] = loadCSV(joinPath(resultsDir, dijkstraFile));
+        algorithmResults["Bellman-Ford"] = loadCSV(joinPath(resultsDir, bellmanFordFile));
         algorithmResults["A*"] = loadCSV(joinPath(resultsDir, astarFile));
         algorithmResults["Floyd-Warshall"] = loadCSV(joinPath(resultsDir, floydFile));
 
-        algorithmNames = {"ACO", "Dijkstra", "A*", "Floyd-Warshall"};
+        algorithmNames = {"ACO", "Dijkstra", "Bellman-Ford", "A*", "Floyd-Warshall"};
     }
 
     bool hasAllRequiredResults() const {
@@ -131,7 +133,7 @@ public:
 
         if (!hasAllRequiredResults()) {
             cerr << "Error: not all result files were loaded successfully." << endl;
-            cerr << "Expected non-empty results for ACO, Dijkstra, A*, and Floyd-Warshall." << endl;
+            cerr << "Expected non-empty results for ACO, Dijkstra, Bellman-Ford, A*, and Floyd-Warshall." << endl;
             return;
         }
 
@@ -180,6 +182,7 @@ private:
     static string csvAlgorithmKey(const string& algoName) {
         if (algoName == "ACO") return "ACO";
         if (algoName == "Dijkstra") return "Dijkstra";
+        if (algoName == "Bellman-Ford") return "Bellman-Ford";
         if (algoName == "A*") return "AStar";
         if (algoName == "Floyd-Warshall") return "FloydWarshall";
         return algoName;
@@ -830,58 +833,60 @@ private:
             return;
         }
 
-        file << "Metric,ACO,Dijkstra,A*,Floyd-Warshall\n";
+        file << "Metric,ACO,Dijkstra,Bellman-Ford,A*,Floyd-Warshall\n";
 
-        vector<AlgorithmStats> allStats;
-        for (const auto& algoName : algorithmNames) {
-            allStats.push_back(calculateAlgorithmStats(algoName, algorithmResults[algoName]));
-        }
+        const auto statsACO = calculateAlgorithmStats("ACO", algorithmResults["ACO"]);
+        const auto statsDJ = calculateAlgorithmStats("Dijkstra", algorithmResults["Dijkstra"]);
+        const auto statsBF = calculateAlgorithmStats("Bellman-Ford", algorithmResults["Bellman-Ford"]);
+        const auto statsAS = calculateAlgorithmStats("A*", algorithmResults["A*"]);
+        const auto statsFW = calculateAlgorithmStats("Floyd-Warshall", algorithmResults["Floyd-Warshall"]);
 
-        auto cmpACO = compareWithDijkstra(algorithmResults["ACO"], algorithmResults["Dijkstra"]);
-        auto cmpASTAR = compareWithDijkstra(algorithmResults["A*"], algorithmResults["Dijkstra"]);
-        auto cmpFW = compareWithDijkstra(algorithmResults["Floyd-Warshall"], algorithmResults["Dijkstra"]);
+        const auto cmpACO = compareWithDijkstra(algorithmResults["ACO"], algorithmResults["Dijkstra"]);
+        const auto cmpBF  = compareWithDijkstra(algorithmResults["Bellman-Ford"], algorithmResults["Dijkstra"]);
+        const auto cmpAS  = compareWithDijkstra(algorithmResults["A*"], algorithmResults["Dijkstra"]);
+        const auto cmpFW  = compareWithDijkstra(algorithmResults["Floyd-Warshall"], algorithmResults["Dijkstra"]);
 
         file << "SuccessRate,"
-             << allStats[0].successRate << ","
-             << allStats[1].successRate << ","
-             << allStats[2].successRate << ","
-             << allStats[3].successRate << "\n";
+            << statsACO.successRate << ","
+            << statsDJ.successRate << ","
+            << statsBF.successRate << ","
+            << statsAS.successRate << ","
+            << statsFW.successRate << "\n";
 
         file << "AvgTime,"
-             << allStats[0].avgTime << ","
-             << allStats[1].avgTime << ","
-             << allStats[2].avgTime << ","
-             << allStats[3].avgTime << "\n";
+            << statsACO.avgTime << ","
+            << statsDJ.avgTime << ","
+            << statsBF.avgTime << ","
+            << statsAS.avgTime << ","
+            << statsFW.avgTime << "\n";
 
         file << "TotalTime,"
-             << allStats[0].totalTime << ","
-             << allStats[1].totalTime << ","
-             << allStats[2].totalTime << ","
-             << allStats[3].totalTime << "\n";
+            << statsACO.totalTime << ","
+            << statsDJ.totalTime << ","
+            << statsBF.totalTime << ","
+            << statsAS.totalTime << ","
+            << statsFW.totalTime << "\n";
 
         file << "OptimalityRate,"
-             << cmpACO.optimalityRate << ","
-             << 100.0 << ","
-             << cmpASTAR.optimalityRate << ","
-             << cmpFW.optimalityRate << "\n";
+            << cmpACO.optimalityRate << ","
+            << 100.0 << ","
+            << cmpBF.optimalityRate << ","
+            << cmpAS.optimalityRate << ","
+            << cmpFW.optimalityRate << "\n";
 
         file << "AvgRelativeErrorPct,"
-             << cmpACO.avgRelativeErrorPct << ","
-             << 0.0 << ","
-             << cmpASTAR.avgRelativeErrorPct << ","
-             << cmpFW.avgRelativeErrorPct << "\n";
+            << cmpACO.avgRelativeErrorPct << ","
+            << 0.0 << ","
+            << cmpBF.avgRelativeErrorPct << ","
+            << cmpAS.avgRelativeErrorPct << ","
+            << cmpFW.avgRelativeErrorPct << "\n";
 
         file << "MaxRelativeErrorPct,"
-             << cmpACO.maxRelativeErrorPct << ","
-             << 0.0 << ","
-             << cmpASTAR.maxRelativeErrorPct << ","
-             << cmpFW.maxRelativeErrorPct << "\n";
-
-        // file << "AvgTimeRatioVsDijkstra,"
-        //      << cmpACO.avgTimeRatioVsDijkstra << ","
-        //      << 1.0 << ","
-        //      << cmpASTAR.avgTimeRatioVsDijkstra << ","
-        //      << cmpFW.avgTimeRatioVsDijkstra << "\n";
+            << cmpACO.maxRelativeErrorPct << ","
+            << 0.0 << ","
+            << cmpBF.maxRelativeErrorPct << ","
+            << cmpAS.maxRelativeErrorPct << ","
+            << cmpFW.maxRelativeErrorPct << "\n";
     }
 
     void savePerTestComparisonCSV(const string& filename) {
@@ -894,11 +899,13 @@ private:
         file << "TestName,Vertices,Edges,SizeCategory,DensityCategory,FamilyCategory,"
              << "DijkstraFound,DijkstraLength,DijkstraTime,DijkstraIterations,"
              << "ACOFound,ACOLength,ACOTime,ACOIterations,ACOOptimal,ACORelativeErrorPct,"
+             << "BellmanFordFound,BellmanFordLength,BellmanFordTime,BellmanFordIterations,BellmanFordOptimal,BellmanFordRelativeErrorPct,"
              << "AStarFound,AStarLength,AStarTime,AStarIterations,AStarOptimal,AStarRelativeErrorPct,"
              << "FloydWarshallFound,FloydWarshallLength,FloydWarshallTime,FloydWarshallIterations,FloydWarshallOptimal,FloydWarshallRelativeErrorPct\n";
 
         const auto djMap = buildResultMap(algorithmResults["Dijkstra"]);
         const auto acoMap = buildResultMap(algorithmResults["ACO"]);
+        const auto bfMap = buildResultMap(algorithmResults["Bellman-Ford"]);
         const auto astarMap = buildResultMap(algorithmResults["A*"]);
         const auto fwMap = buildResultMap(algorithmResults["Floyd-Warshall"]);
 
@@ -952,6 +959,8 @@ private:
 
             writeAlgo(acoMap);
             file << ",";
+            writeAlgo(bfMap);
+            file << ",";
             writeAlgo(astarMap);
             file << ",";
             writeAlgo(fwMap);
@@ -966,7 +975,7 @@ private:
             return;
         }
 
-        file << "ScopeType,ScopeValue,Metric,ACO,Dijkstra,A*,Floyd-Warshall\n";
+        file << "ScopeType,ScopeValue,Metric,ACO,Dijkstra,Bellman-Ford,A*,Floyd-Warshall\n";
 
         const vector<AggregateRow> rows = buildAllAggregateRows();
 
@@ -999,26 +1008,27 @@ private:
         for (const auto& scope : scopes) {
             const auto aco = findRow(scope.first, scope.second, "ACO");
             const auto dj = findRow(scope.first, scope.second, "Dijkstra");
+            const auto bf = findRow(scope.first, scope.second, "Bellman-Ford");
             const auto astar = findRow(scope.first, scope.second, "A*");
             const auto fw = findRow(scope.first, scope.second, "Floyd-Warshall");
 
             file << scope.first << "," << scope.second << ",SuccessRate,"
-                 << aco.successRate << "," << dj.successRate << "," << astar.successRate << "," << fw.successRate << "\n";
+                 << aco.successRate << "," << dj.successRate << "," << bf.successRate << "," << astar.successRate << "," << fw.successRate << "\n";
 
             file << scope.first << "," << scope.second << ",AvgTime,"
-                 << aco.timeStats.mean << "," << dj.timeStats.mean << "," << astar.timeStats.mean << "," << fw.timeStats.mean << "\n";
+                 << aco.timeStats.mean << "," << dj.timeStats.mean << "," << bf.timeStats.mean << "," << astar.timeStats.mean << "," << fw.timeStats.mean << "\n";
 
             file << scope.first << "," << scope.second << ",MedianTime,"
-                 << aco.timeStats.median << "," << dj.timeStats.median << "," << astar.timeStats.median << "," << fw.timeStats.median << "\n";
+                 << aco.timeStats.median << "," << dj.timeStats.median << "," << bf.timeStats.median << "," << astar.timeStats.median << "," << fw.timeStats.median << "\n";
 
             file << scope.first << "," << scope.second << ",OptimalityRate,"
-                 << aco.optimalityRate << "," << dj.optimalityRate << "," << astar.optimalityRate << "," << fw.optimalityRate << "\n";
+                 << aco.optimalityRate << "," << dj.optimalityRate << "," << bf.optimalityRate << "," << astar.optimalityRate << "," << fw.optimalityRate << "\n";
 
             file << scope.first << "," << scope.second << ",AvgRelativeErrorPct,"
-                 << aco.avgRelativeErrorPct << "," << dj.avgRelativeErrorPct << "," << astar.avgRelativeErrorPct << "," << fw.avgRelativeErrorPct << "\n";
+                 << aco.avgRelativeErrorPct << "," << dj.avgRelativeErrorPct << "," << bf.avgRelativeErrorPct << "," << astar.avgRelativeErrorPct << "," << fw.avgRelativeErrorPct << "\n";
 
             file << scope.first << "," << scope.second << ",AvgIterations,"
-                 << aco.iterationStats.mean << "," << dj.iterationStats.mean << "," << astar.iterationStats.mean << "," << fw.iterationStats.mean << "\n";
+                 << aco.iterationStats.mean << "," << dj.iterationStats.mean << "," << bf.iterationStats.mean << "," << astar.iterationStats.mean << "," << fw.iterationStats.mean << "\n";
         }
     }
 

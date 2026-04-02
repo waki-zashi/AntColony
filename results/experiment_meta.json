@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-04-02T10:07:09Z",
+  "timestamp_utc": "2026-04-02T11:50:51Z",
   "mode": "full-pipeline-finished",
   "test_directory": "data/test_cases",
   "test_suite_exists": true,
@@ -9,6 +9,7 @@
   "expected_result_files": [
     "results/aco_results.csv",
     "results/dijkstra_results.csv",
+    "results/bellman_ford_results.csv",
     "results/astar_results.csv",
     "results/fw_results.csv",
     "results/detailed_comparison.csv",
@@ -19,7 +20,7 @@
   ],
   "pipeline": {
     "generate_if_missing": true,
-    "run_algorithms": ["ACO", "Dijkstra", "A*", "Floyd-Warshall"],
+    "run_algorithms": ["ACO", "Dijkstra", "Bellman-Ford", "A*", "Floyd-Warshall"],
     "analyze_after_run": true
   }
 }

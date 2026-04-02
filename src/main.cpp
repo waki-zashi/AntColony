@@ -21,7 +21,7 @@ namespace {
         // cout << "  ./aco --interactive\n";
         cout << "  ./aco --single <graph_file>\n";
         cout << "  ./aco --generate-tests [--test-dir <dir>]\n";
-        cout << "  ./aco --run <aco|dj|fw|astar> [--test-dir <dir>]\n";
+        cout << "  ./aco --run <aco|dj|bf|fw|astar> [--test-dir <dir>]\n";
         // cout << "  ./aco --run-all [--test-dir <dir>]\n";
         cout << "  ./aco --analyze\n";
         cout << "  ./aco --full-pipeline [--test-dir <dir>]\n";
@@ -98,7 +98,7 @@ namespace {
 
                 while (choiceTestFlag) {
                     string choiceTestCommand;
-                    cout << "What you want to test: ACO (aco), Dijkstra (dj), Floyd Warshall (fw), A-Star (a*), run all (runall) or analyze (all): ";
+                    cout << "What you want to test: ACO (aco), Dijkstra (dj), Bellman-Ford (bf), Floyd Warshall (fw), A-Star (a*), run all (runall) or analyze (all): ";
                     cin >> choiceTestCommand;
 
                     if (choiceTestCommand == "aco") {
@@ -107,6 +107,9 @@ namespace {
                     } else if (choiceTestCommand == "dj") {
                         choiceTestFlag = false;
                         pipeline.runDijkstra();
+                    } else if (choiceTestCommand == "bf") {
+                        choiceTestFlag = false;
+                        pipeline.runBellmanFord();
                     } else if (choiceTestCommand == "fw") {
                         choiceTestFlag = false;
                         pipeline.runFloydWarshall();
@@ -121,7 +124,7 @@ namespace {
                         pipeline.analyzeResults();
                     } else {
                         cout << "Wrong choice, please repeat correctly: "
-                             << "'aco', 'dj', 'fw', 'a*', 'runall' or 'all'\n";
+                             << "'aco', 'dj', 'bf', 'fw', 'a*', 'runall' or 'all'\n";
                     }
                 }
             } else if (baseCommand == "i") {
@@ -215,6 +218,10 @@ int main(int argc, char* argv[]) {
                 pipeline.runDijkstra();
                 return 0;
             }
+            if (algo == "bf") {
+                pipeline.runBellmanFord();
+                return 0;
+            }
             if (algo == "fw") {
                 pipeline.runFloydWarshall();
                 return 0;
@@ -225,7 +232,7 @@ int main(int argc, char* argv[]) {
             }
 
             cerr << "Unknown algorithm: " << algo << endl;
-            cerr << "Allowed: aco, dj, fw, astar" << endl;
+            cerr << "Allowed: aco, dj, bf, fw, astar" << endl;
             return 1;
         }
     }

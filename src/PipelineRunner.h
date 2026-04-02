@@ -12,6 +12,7 @@ public:
     void runACO() const;
     void runDijkstra() const;
     void runFloydWarshall() const;
+    void runBellmanFord() const;
     void runAStar() const;
 
     void runAllAlgorithms() const;
